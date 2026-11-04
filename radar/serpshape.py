@@ -6,7 +6,8 @@ default; the page-one check's own results are reused when it read the same marke
 - `homepages` and `inner`: a result at a site's root ("/", "/index.html", a bare locale
   such as "/en/") is a homepage; anything deeper is an inner page. A site that put its
   homepage on the term has built for it; an inner page is a post or a section that a page
-  made for the term can outrank;
+  made for the term can outrank (a hit Google wrapped in its own redirect has no readable
+  path and counts as neither);
 - `platforms`: results on high-authority platforms (github.com, medium.com, reddit.com,
   youtube.com, ..., configurable; "*.github.io" means its subdomains);
 - `exact_titles`: results whose title holds the term as a phrase; `exact_home` when one
@@ -63,16 +64,21 @@ def _squash(text: str) -> str:
 
 
 def shape(results: list[dict], term: str, platforms: list[str]) -> dict:
-    """The shape of one page one. `results`: [{"url", "title", "domain"?}] in rank order."""
+    """The shape of one page one. `results`: [{"url", "page"?, "title", "domain"?, "wrapped"?}] in rank order.
+    Every result keeps its slot in the ten, including the ones read through Google's redirect
+    ("wrapped", path unknown) and the ones whose site cannot be read at all ("unread"): a
+    denominator made of the readable results only would call half-read pages beatable."""
     results = results[:10]
     if not results:
         return {"verdict": None, "results": 0}
-    homes = [r for r in results if is_homepage(r.get("url", ""))]
+    homes = [r for r in results if not r.get("wrapped") and is_homepage(r.get("url", ""))]
+    wrapped = [r for r in results if r.get("wrapped")]          # a redirect hides the path: neither home nor inner
+    unread = [r for r in results if r.get("wrapped") and not r.get("domain")]   # no site either: still one of the ten
     plat = [r for r in results if on_platform(r.get("domain") or domain_of(r.get("url", "")), platforms)]
     exact = [r for r in results if has_phrase(r.get("title", ""), term)]
     exact_home = any(has_phrase(r.get("title", ""), term)
                      or _squash(term) in _squash((r.get("domain") or domain_of(r.get("url", ""))).split(".")[0]) for r in homes)
-    n, inner = len(results), len(results) - len(homes)
+    n, inner = len(results), len(results) - len(homes) - len(wrapped)
     if 2 * len(plat) >= n:
         verdict = "platform-held"
     elif 2 * inner > n and not exact_home:
@@ -80,8 +86,11 @@ def shape(results: list[dict], term: str, platforms: list[str]) -> dict:
     else:
         verdict = "contested"
     return {"verdict": verdict, "results": n, "homepages": len(homes), "inner": inner, "platforms": len(plat),
+            # read through a redirect (its path is unknown); the ones whose site cannot be read are counted as unread
+            "wrapped": len(wrapped) - len(unread), "unread": len(unread),
             "exact_titles": len(exact), "exact_home": exact_home,
-            "top": [{"url": r.get("url", ""), "title": r.get("title", "")} for r in results[:2]]}
+            # the address a reader can open: a result read through Google's redirect has no usable url
+            "top": [{"url": competition.address(r), "title": r.get("title", "")} for r in results[:2]]}
 
 
 def assess(rows: list[dict], cfg: dict) -> tuple[int, list[str]]:

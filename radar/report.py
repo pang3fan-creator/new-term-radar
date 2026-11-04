@@ -499,6 +499,10 @@ def _serp(sv: dict | None) -> str:
     if not sv or not sv.get("verdict"):
         return t("dash")
     bits = [t("ss_" + sv["verdict"].replace("-", "_")), t("ss_counts", home=sv["homepages"], inner=sv["inner"], plat=sv["platforms"])]
+    if sv.get("wrapped"):
+        bits.append(t("ss_redirect", n=sv["wrapped"]))
+    if sv.get("unread"):
+        bits.append(t("ss_unread", n=sv["unread"]))
     if sv.get("exact_titles"):
         bits.append(t("ss_exact", n=sv["exact_titles"]))
     if sv.get("exact_home"):
@@ -514,7 +518,7 @@ def _extra_lines(cfg: dict, uc: dict) -> list[str]:
         lines.append(t("extra_note", days=cfg["word_age"]["new_days"], platforms=", ".join(cfg["serp_shape"]["platforms"])))
     tops = [(r["phrase"], r["serp"]["top"]) for r in rows if (r.get("serp") or {}).get("top")]
     if tops:
-        link = lambda x: f"[{_cell(x['title']).translate(BRACKETS)[:70] or x['url']}]({x['url']})" if x else t("dash")  # noqa: E731
+        link = lambda x: f"[{_cell(x['title']).translate(BRACKETS)[:70] or x['url']}]({x['url']})" if x and x["url"] else t("dash")  # noqa: E731
         lines += ["", t("ss_top_h"), *[t("ss_top", phrase=ph, one=link(top[0]), two=link(top[1] if len(top) > 1 else None)) for ph, top in tops]]
     if uc.get("extra_errors"):
         lines += ["", t("ex_err", names="; ".join(uc["extra_errors"]))]

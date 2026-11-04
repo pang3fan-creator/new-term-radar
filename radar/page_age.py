@@ -114,5 +114,6 @@ def record(rows: list[dict], pages: dict[str, dict], state: Path, today: date | 
     held: dict[str, dict] = snap.load(path) or {}
     for r in read:
         results = pages[r["phrase"]]["results"]
-        r["page_age"] = {**ages(results, born, today), "entered": entered(r["phrase"], [x["url"] for x in results], held, today)}
+        seen = [x.get("page", "") for x in results]                        # a wrapped url changes every read
+        r["page_age"] = {**ages(results, born, today), "entered": entered(r["phrase"], [u for u in seen if u], held, today)}
     snap.save(path, held)

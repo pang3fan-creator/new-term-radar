@@ -1006,26 +1006,171 @@ def test_page_one_verdicts():
     assert competition.page_kind("headshots.com", "https://headshots.com/best", "16 Best AI Headshot Generators") == "list"
 
 
+def test_a_result_wrapped_in_a_google_redirect_is_read_by_its_real_site(monkeypatch):
+    """Some organic results arrive wrapped in Google's own redirect: `domain` reads google.com
+    and `url` is an opaque token that no one can unwrap. The site is named in the breadcrumb
+    ("https://www.pa.gov › ..."), else in the site name when that is a site. A wrapped result
+    naming neither keeps its slot in the ten without a site: dropping it would shrink the
+    denominator the page-one shape divides by."""
+    items = [
+        {"type": "organic", "domain": "google.com", "url": "https://google.com/goto?url=CAESabc", "rank_group": 1,
+         "title": "REAL ID in Pennsylvania", "breadcrumb": "https://www.pa.gov › ... › Driver Services"},
+        {"type": "organic", "domain": "google.com", "url": "https://google.com/goto?url=CAESdef", "rank_group": 2,
+         "title": "Best PDF editor?", "website_name": "reddit.com"},
+        {"type": "organic", "domain": "google.com", "url": "https://google.com/goto?url=CAESghi", "rank_group": 3,
+         "title": "20+ comments", "breadcrumb": "20+ comments  ·  1 year ago",
+         "website_name": "Facebook · Cheesecake Lovers"},
+        {"type": "organic", "domain": "google.com", "url": "https://google.com/goto?url=CAESjkl", "rank_group": 4,
+         "title": "How Tariffs Hit Beef", "breadcrumb": "https://www.pbs.org · Sep 17, 2026 › ..."},   # the site, then a date
+        {"type": "organic", "domain": "www.tool.com", "url": "https://www.tool.com/", "rank_group": 5, "title": "Tool"},
+    ]
+
+    def call(calls):
+        return {"serp": {"tasks": [{"result": [{"items": items}]}]}}, 2000
+    monkeypatch.setattr(competition.aisa, "call", call)
+    page, _ = competition.page_one("real id", 2840)
+    assert [r["domain"] for r in page["results"]] == ["pa.gov", "reddit.com", "", "pbs.org", "tool.com"]
+    assert [r["kind"] for r in page["results"]] == ["article", "forum", "unread", "article", "tool"]
+    assert [r["page"] for r in page["results"]] == ["https://pa.gov", "https://reddit.com", "", "https://pbs.org",
+                                                    "https://www.tool.com/"]
+    assert page["results"][1]["kind"] == "forum" and [f["domain"] for f in page["forums"]] == ["reddit.com"]
+    assert page["forums"][0]["url"] == "https://reddit.com"        # a reader can open it, unlike the token
+    assert [r["wrapped"] for r in page["results"]] == [True, True, True, True, False]
+
+
+def test_an_unreadable_result_keeps_its_slot_so_the_page_is_not_called_beatable():
+    """Ten results, four of them inner pages, the rest unreadable: 8 is not more than 10, so the
+    page is contested. Dropping the unreadable five would leave n=5 and call it beatable."""
+    from radar import serpshape
+    rows = [{"url": "https://a.com/", "title": "a"}]
+    rows += [{"url": f"https://b{i}.com/x", "title": "b"} for i in range(4)]
+    rows += [{"url": "https://google.com/goto?url=y", "title": "u", "wrapped": True, "domain": ""} for _ in range(5)]
+    s = serpshape.shape(rows, "real id", ["reddit.com"])
+    assert (s["results"], s["homepages"], s["inner"], s["unread"]) == (10, 1, 4, 5)
+    assert s["verdict"] == "contested"
+
+
+def test_a_google_redirect_is_recognised_by_its_host_however_the_url_is_written():
+    """The wrapper is Google whatever path it uses (/goto, /url) and whatever country it is in."""
+    for url in ("https://google.com/url?q=https://pa.gov", "HTTPS://GOOGLE.COM/GOTO?url=x",
+                "//google.com/goto?url=x", "https://www.google.co.uk/goto?url=x"):
+        r = competition.result({"type": "organic", "domain": "google.com", "url": url, "rank_group": 1,
+                                "title": "REAL ID", "breadcrumb": "https://www.pa.gov › ..."})
+        assert (r["domain"], r["wrapped"], r["page"]) == ("pa.gov", True, "https://pa.gov"), url
+
+
+def test_a_wrapped_result_names_only_a_site_that_is_one():
+    """`website_name` is prose ("Facebook · Cheesecake Lovers") more often than it is a host,
+    and Google itself is never the site."""
+    wrapped = {"type": "organic", "domain": "google.com", "url": "https://google.com/goto?url=x", "rank_group": 1}
+    assert competition.result({**wrapped, "website_name": "3.5"})["domain"] == ""
+    assert competition.result({**wrapped, "website_name": "google.com"})["domain"] == ""
+    assert competition.result({**wrapped, "website_name": "MindByte.com"})["domain"] == "mindbyte.com"
+    assert competition.result({**wrapped, "breadcrumb": "www.pa.gov › ..."})["domain"] == "pa.gov"
+
+
+def test_a_breadcrumb_that_is_not_an_address_names_no_site():
+    """A rating ("4.5 stars · reviewed") reads as a host's first two labels; it is not one."""
+    wrapped = {"type": "organic", "domain": "google.com", "url": "https://google.com/goto?url=x", "rank_group": 1}
+    assert competition.result({**wrapped, "breadcrumb": "4.5 stars · reviewed", "website_name": "Fairhealth"})["domain"] == ""
+    assert competition.result({**wrapped, "breadcrumb": "1.2.3 · x"})["domain"] == ""
+    assert competition.result({**wrapped, "breadcrumb": "https://www.pa.gov › ..."})["page"] == "https://pa.gov"
+
+
+def test_a_wrapper_over_a_site_already_named_keeps_that_site():
+    """If a response names the domain and still hands back a redirect, the known site is not thrown away."""
+    row = competition.result({"type": "organic", "domain": "pa.gov", "url": "https://google.com/goto?url=x", "rank_group": 3})
+    assert (row["domain"], row["page"], row["wrapped"]) == ("pa.gov", "https://pa.gov", True)
+
+
+def test_the_page_one_shape_says_how_many_results_came_through_a_redirect():
+    """`inner` cannot be checked against the ten unless the redirected results are shown too."""
+    from radar import report, serpshape
+    rows = [{"url": "https://a.example/", "title": "x", "domain": "a.example"},
+            {"url": "https://google.com/goto?url=T", "page": "", "wrapped": True, "title": "y", "domain": ""},
+            {"url": "https://google.com/goto?url=U", "page": "https://pa.gov", "wrapped": True, "title": "z", "domain": "pa.gov"}]
+    sv = serpshape.shape(rows, "real id", [])
+    assert (sv["results"], sv["homepages"], sv["inner"], sv["wrapped"], sv["unread"]) == (3, 1, 0, 1, 1)
+    assert 1 + 0 + 1 + 1 == sv["results"]                  # home + inner + redirected + unread = the ten
+    assert "1 via redirect" in report._serp(sv) and "1 unread" in report._serp(sv)
+
+
+def test_the_page_one_top_is_an_address_a_reader_can_open():
+    """The token is unreadable and changes on every read: it is never what the report links."""
+    from radar import serpshape
+    rows = [{"url": "https://google.com/goto?url=SECRET", "title": "Reminder: same-day REAL ID", "wrapped": True, "domain": ""},
+            {"url": "https://google.com/goto?url=TOKEN", "title": "REAL ID centers", "wrapped": True, "domain": "pa.gov",
+             "page": "https://pa.gov"}]
+    assert [t["url"] for t in serpshape.shape(rows, "real id", [])["top"]] == ["", "https://pa.gov"]
+
+
+def test_a_real_page_one_through_google_is_read_without_counting_google_as_a_competitor(monkeypatch):
+    """One real response read 2026-11-04 (tests/fixtures/serp_google_redirect.json): nine organic
+    results, six of them wrapped in Google's redirect. That share is the whole reason for this."""
+    data = json.loads((Path(__file__).parent / "fixtures" / "serp_google_redirect.json").read_text())
+
+    def call(calls):
+        return {"serp": {"tasks": [{"result": [{"items": data["items"]}]}]}}, 2000
+    monkeypatch.setattr(competition.aisa, "call", call)
+    page, _ = competition.page_one(data["keyword"], data["location_code"])
+    assert len(page["results"]) == 9
+    assert "google.com" not in [r["domain"] for r in page["results"]]
+    assert [r["domain"] for r in page["results"] if r["domain"]] == \
+        ["oklahoma.gov", "facebook.com", "visitphilly.com", "facebook.com", "facebook.com"]
+    assert sum(1 for r in page["results"] if not r["domain"]) == 4
+    assert [r["kind"] for r in page["results"] if not r["domain"]] == ["unread", "unread", "unread", "unread"]
+
+
+def test_ratings_never_asks_about_a_google_redirect_or_an_empty_site(tmp_path, monkeypatch):
+    """A site rating costs money per site and is kept 30 days: spending it on google.com is waste,
+    and asking about "" is worse."""
+    from radar import goanyapi
+    asked = []
+
+    def call(path, **params):
+        asked.append(params["domain"])
+        return {"domain_rating": 10}, 2000
+    monkeypatch.setattr(goanyapi, "key", lambda: "k")
+    monkeypatch.setattr(goanyapi, "call", call)
+    competition.ratings(["pa.gov", "", "google.com", "www.google.de", "pa.gov"], tmp_path)
+    assert asked == ["pa.gov"]
+
+
 def test_page_one_sites_are_dated_by_registration_and_compared_across_readings(tmp_path, monkeypatch):
     from radar import page_age
     born = {"tool-a.example": "2026-08-01", "old.example": "2015-03-03", "example.co.uk": "2026-07-01"}
     monkeypatch.setattr(page_age, "ask", lambda d: (born[d], "ok") if d in born else ("", "none"))
-    first = {"results": [{"domain": "tool-a.example", "url": "https://tool-a.example/", "position": 2},
-                         {"domain": "old.example", "url": "https://old.example/x", "position": 1},
-                         {"domain": "docs.example.co.uk", "url": "https://docs.example.co.uk/a", "position": 5},
-                         {"domain": "nodate.example", "url": "https://nodate.example/", "position": 9}]}
+    first = {"results": [{"domain": "tool-a.example", "url": "https://tool-a.example/", "page": "https://tool-a.example/", "position": 2},
+                         {"domain": "old.example", "url": "https://old.example/x", "page": "https://old.example/x", "position": 1},
+                         {"domain": "docs.example.co.uk", "url": "https://docs.example.co.uk/a", "page": "https://docs.example.co.uk/a", "position": 5},
+                         {"domain": "nodate.example", "url": "https://nodate.example/", "page": "https://nodate.example/", "position": 9}]}
     rows = [{"phrase": "new term", "decision": "prioritize"}, {"phrase": "unread", "decision": "watch"}]
     page_age.record(rows, {"new term": first}, tmp_path, date(2026, 10, 20))
     got = rows[0]["page_age"]
     assert (got["dated"], got["young"], got["newest"]) == (3, 2, "2026-08-01") and "page_age" not in rows[1]
     assert [s["domain"] for s in got["young_sites"]] == ["tool-a.example", "docs.example.co.uk"]
     assert got["entered"] == {"since": "", "urls": []} and rows[0]["decision"] == "prioritize"   # recorded, not used
-    second = {"results": first["results"][:2] + [{"domain": "fresh.example", "url": "https://fresh.example/", "position": 4}]}
+    second = {"results": first["results"][:2] + [{"domain": "fresh.example", "url": "https://fresh.example/",
+                                                     "page": "https://fresh.example/", "position": 4}]}
     page_age.record(rows, {"new term": second}, tmp_path, date(2026, 10, 23))
     assert rows[0]["page_age"]["entered"] == {"since": "2026-10-20", "urls": ["https://fresh.example/"]}
     late = rows[:1]
     page_age.record(late, {"new term": second}, tmp_path, date(2026, 11, 20))              # over a week after: not compared
     assert late[0]["page_age"]["entered"] == {"since": "", "urls": []}
+
+
+def test_entered_compares_the_address_a_reader_can_open_not_the_redirect_token(tmp_path, monkeypatch):
+    """The token changes on every read: compared, every result would look new."""
+    from radar import page_age
+    monkeypatch.setattr(page_age, "ask", lambda d: ("", "none"))
+    rows = [{"phrase": "real id", "decision": "watch"}]
+
+    def read(token):
+        return {"results": [{"domain": "", "url": f"https://google.com/goto?url={token}", "page": "",
+                             "wrapped": True, "position": 1}]}
+    page_age.record(rows, {"real id": read("AAA")}, tmp_path, date(2026, 10, 20))
+    page_age.record(rows, {"real id": read("BBB")}, tmp_path, date(2026, 10, 21))
+    assert rows[0]["page_age"]["entered"] == {"since": "2026-10-20", "urls": []}
 
 
 def test_rdap_is_asked_once_more_and_a_registry_without_it_says_none(monkeypatch):

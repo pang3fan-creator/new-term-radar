@@ -180,13 +180,15 @@ T = {
     "mk_best": ("best {code}", "最佳 {code}"), "mk_top": ("top {name}", "热度最高 {name}"),
     "ss_beatable": ("beatable", "可超越"), "ss_platform_held": ("platform-held", "平台占据"), "ss_contested": ("contested", "有争夺"),
     "ss_counts": ("{home} home / {inner} inner · {plat} platform", "{home} 首页 / {inner} 内页 · {plat} 平台"),
+    "ss_redirect": ("{n} via redirect", "{n} 条经跳转"),
+    "ss_unread": ("{n} unread", "{n} 条读不出"),
     "ss_exact": ("exact title ×{n}", "标题含原词 ×{n}"), "ss_exact_home": ("exact-match homepage", "有精确匹配首页"),
     "extra_note": ("First searched = the first week with any Trends interest in the last 5 years (DataForSEO Trends; the week still running and the unsettled last days left out); \"before\" = searched from the start of the range. 🆕 = first searched within {days} days: its page one is read one step easier (crowded → mixed, mixed → open), since difficulty scores lag a new term. "
                    "Markets = Google Ads monthly searches / keyword difficulty per country, all languages; best = most searches per point of difficulty (most searches when a difficulty is missing); top = the country where Trends interest is highest. "
-                   "Page-one shape (prioritized rows): homepages against inner pages in the top ten, results on platforms ({platforms}), titles holding the keyword; platform-held = half or more on platforms; beatable = mostly inner pages and no exact-match homepage; contested otherwise.",
+                   "Page-one shape (prioritized rows): homepages against inner pages in the top ten, results on platforms ({platforms}), titles holding the keyword; platform-held = half or more on platforms; beatable = mostly inner pages and no exact-match homepage; contested otherwise. A result Google wraps in its own redirect has no readable path and counts as neither, and stays in the ten (unread when its site cannot be read at all).",
                    "首次有搜索 = 近 5 年里第一个有 Trends 热度的那一周(DataForSEO Trends;还没过完的一周和没结算的最后两天不计);“之前” = 从区间开头就有搜索。🆕 = 首次有搜索在 {days} 天内:它的首页竞争放宽一档读(挤满 → 一般,一般 → 能进),因为难度分数跟不上新词。"
                    "市场 = 各国 Google Ads 月搜索量 / 关键词难度,不限语言;最佳 = 每点难度对应的搜索量最高(缺难度时按搜索量);热度最高 = Trends 里热度最高的国家。"
-                   "首页结构(仅优先行):前十里首页和内页各几个、平台上的结果({platforms})、标题含关键词的;平台占据 = 一半以上在平台上;可超越 = 大多是内页且没有精确匹配的首页;其余为有争夺。"),
+                   "首页结构(仅优先行):前十里首页和内页各几个、平台上的结果({platforms})、标题含关键词的;平台占据 = 一半以上在平台上;可超越 = 大多是内页且没有精确匹配的首页;其余为有争夺。被 Google 自己的跳转包住的结果读不出路径,首页和内页都不算,但仍占前十的一个位置(连站点都读不出时记作读不出)。"),
     "ss_top_h": ("#1 and #2 on page one (prioritized rows):", "首页第 1、2 名(仅优先行):"),
     "ss_top": ("- **{phrase}**: #1 {one} · #2 {two}", "- **{phrase}**:第 1 {one} · 第 2 {two}"),
     "ex_err": ("Some extra readings failed (word age, markets, page-one shape, your rank, .com): {names}.",
@@ -238,7 +240,7 @@ T = {
     "pc_err": ("Page-one check failed for: {names}.", "首页竞争查询失败:{names}。"),
     "pc_no_dr": ("No GOANYAPI_API_KEY: page one is judged by keyword difficulty alone, without the sites' ratings.",
                  "没有 GOANYAPI_API_KEY:首页竞争只看关键词难度,没有各站评分。"),
-    "pk_tool": ("tool", "工具"), "pk_list": ("list", "榜单"), "pk_article": ("article", "文章"), "pk_video": ("video", "视频"), "pk_forum": ("forum", "论坛"),
+    "pk_tool": ("tool", "工具"), "pk_list": ("list", "榜单"), "pk_article": ("article", "文章"), "pk_video": ("video", "视频"), "pk_forum": ("forum", "论坛"), "pk_unread": ("unread", "读不出"),
     "uc_type_name": ("name", "名字"), "uc_type_generic": ("generic", "通用词"),
     "uc_yes": ("yes", "是"), "uc_no": ("no", "否"),
     "uc_now_rising": ("still rising", "还在涨"), "uc_now_holding": ("holding", "维持"), "uc_now_fading": ("fading", "回落"),

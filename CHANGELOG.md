@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.6.2 (2026-11-04)
+
+- **Page one read through Google's own redirect.** Some organic results arrive as
+  `https://google.com/goto?url=<opaque token>`: the token names no site, so `domain` read google.com and every such
+  result was rated (a GoAnyAPI call per site, kept 30 days), counted and shaped as if Google held the slot. On
+  2026-11-04 one real US response had 6 of its 9 results wrapped; across 8 terms, 44 of 65. The site is now read
+  from the breadcrumb's leading address ("https://www.pa.gov › ..."), else from the site name when that is a host,
+  and the wrapper is recognised by its host rather than by the `/goto` path (`/url?q=`, upper case, a protocol-relative
+  url and `google.co.uk` all count). A wrapped result whose site cannot be read keeps its slot in the ten instead of
+  being dropped: the page-one shape divides by the ten, and a denominator made of the readable results only would call
+  half-read pages beatable. It is never rated and never counted as a competitor, and the report links the address a
+  reader can open (`https://pa.gov`) rather than the token. `page_age`'s "entered the top ten" tracks that address too:
+  the token changes on every read. The page-one shape says how many of the ten came through a redirect and how many
+  could not be read at all, so the homepages, inner pages and the rest still add up to the ten.
+
 ## 0.6.1 (2026-10-28)
 
 - Nothing goes out without the user's yes. The three skills and the MCP server's instructions now say the radar

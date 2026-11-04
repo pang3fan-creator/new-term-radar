@@ -7,7 +7,9 @@ a run, this reads:
 - Google's first page (DataForSEO through AIsa, about $0.002 a keyword): what kinds of pages
   hold it, and whether ads show (someone pays for that click: there is money in the term);
 - the rating of each site there (GoAnyAPI, $0.002 a site, kept 30 days): `weak` counts the
-  results on sites rated under 30, the slots a new site can take, and the weakest one is named;
+  results on sites rated under 30, the slots a new site can take, and the weakest one is named
+  (a result DataForSEO returns wrapped in Google's own redirect is read by the site its
+  breadcrumb names, and one that names none is left out: `google.com` is not a competitor);
 - from the same page, what else holds it besides the ten results (`features`: an AI overview,
   an answer box, a forums block, videos, news) and the forum threads there (`forums`): an AI
   overview takes clicks, and a thread on page one is where an answer reaches the searchers;
@@ -38,6 +40,10 @@ KD_TOOL = "post_dataforseo_labs_google_keyword_overview_live"
 DR_DAYS = 30
 WORKERS = 4                 # ratings asked at once
 VIDEO = ("youtube.com", "tiktok.com", "vimeo.com")
+GOOGLE = re.compile(r"^(?:www\.)?google\.[a-z]{2,}(?:\.[a-z]{2})?$")       # Google's own host, any country
+REDIRECT = re.compile(r"^(?:https?:)?//(?:www\.)?google\.[a-z.]{2,}/(?:goto|url)\?", re.I)  # the wrapper itself
+HOSTLIKE = re.compile(r"^(?:[a-z0-9-]+\.)+(?:[a-z]{2,}|xn--[a-z0-9-]+)$")   # a name that is a host, not prose
+HOST = re.compile(r"^(?:https?://)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)", re.I)    # a breadcrumb's leading address
 FORUM = ("reddit.com", "quora.com", "ycombinator.com", "stackoverflow.com", "stackexchange.com", "x.com", "facebook.com")
 FORUMS_KEPT = 5             # threads kept per term: where an answer reaches the people searching
 TOOL = re.compile(r"\b(generator|maker|editor|converter|creator|online|free|app|tool|detector|remover|upscaler|translator)\b", re.I)
@@ -45,7 +51,9 @@ LIST = re.compile(r"\b(best|top|alternatives?|vs\.?|compared?|review(?:s|ed)?)\b
 
 
 def page_kind(domain: str, url: str, title: str) -> str:
-    """tool, list, article, video or forum, from the address and the title."""
+    """tool, list, article, video or forum, from the address and the title; unread when the site is unknown."""
+    if not domain:
+        return "unread"
     if domain.endswith(VIDEO):
         return "video"
     if domain.endswith(FORUM):
@@ -56,26 +64,66 @@ def page_kind(domain: str, url: str, title: str) -> str:
     return "tool" if TOOL.search(title) or not path else "article"
 
 
+def address(r: dict) -> str:
+    """The address of a page-one result a reader can open; "" when it was only ever a token. Rows stored
+    before `page` existed fall back to their url."""
+    if "page" in r:
+        return r["page"]
+    url = r.get("url") or ""
+    return "" if REDIRECT.match(url) else url        # a row stored before this fix still holds the token
+
+
+def bare(host: str | None) -> str:
+    """A host as it is compared: lower case, no "www."."""
+    return re.sub(r"^www\.", "", (host or "").strip().lower())
+
+
+def result(item: dict) -> dict:
+    """One organic result: {domain, url, page, wrapped, title, position}.
+
+    DataForSEO wraps some results in Google's own redirect ("https://google.com/goto?url=<opaque
+    token>"): `url` is then unreadable and `domain` reads google.com. The site is named in the
+    breadcrumb's leading address ("https://www.pa.gov \u203a ..."), else in the site name when that is
+    a host ("mindbyte.com"). `page` is the address a reader can open; `domain` is "" when no site
+    can be read at all — such a result keeps its slot (the shape divides by the ten, not by the
+    readable), it is only never rated or counted as a competitor."""
+    url = item.get("url") or ""
+    host = bare(item.get("domain"))
+    title, position = item.get("title") or "", item.get("rank_group")
+    if not GOOGLE.match(host) and not REDIRECT.match(url):
+        return {"domain": host, "url": url, "page": url, "wrapped": False, "title": title, "position": position}
+    first = (item.get("breadcrumb") or "").strip()
+    cap = bare((HOST.match(first) or ["", ""])[1])                        # "4.5 stars" reads as a host's first two labels
+    named = cap if HOSTLIKE.match(cap) else ""
+    if not named:
+        name = (item.get("website_name") or "").strip()
+        named = bare(name) if HOSTLIKE.match(name.lower()) else ""
+    named = named or (host if not GOOGLE.match(host) else "")             # a wrapper over a domain already named
+    if GOOGLE.match(named):
+        named = ""
+    return {"domain": named, "url": url, "page": f"https://{named}" if named else "", "wrapped": True,
+            "title": title, "position": position}
+
+
 def threads(results: list[dict], items: list[dict]) -> list[dict]:
     """The forum threads on page one: organic results on forums, then the "Discussions and
     forums" block's entries; FORUMS_KEPT at most, each once."""
-    found = [{k: r[k] for k in ("url", "title", "domain")} for r in results if r["kind"] == "forum"]
+    found = [{"url": address(r), "title": r["title"], "domain": r["domain"]} for r in results if r["kind"] == "forum"]
     for block in (i for i in items if i.get("type") == "discussions_and_forums"):
-        found += [{"url": e["url"], "title": e.get("title") or "", "domain": re.sub(r"^www\.", "", e.get("domain") or "")}
+        found += [{"url": e["url"], "title": e.get("title") or "", "domain": bare(e.get("domain"))}
                   for e in block.get("items") or [] if e.get("url")]
     seen: set[str] = set()
     return [f for f in found if not (f["url"] in seen or seen.add(f["url"]))][:FORUMS_KEPT]
 
 
 def page_one(keyword: str, location: int, language: str = "en", device: str = "desktop") -> tuple[dict, int]:
-    """{"results": [{"domain", "url", "title", "position", "kind"}], "ads", "features", "forums"} and the cost."""
+    """{"results": [{"domain", "url", "page", "wrapped", "title", "position", "kind"}], "ads", "features", "forums"} and the cost."""
     data, cost = aisa.call([{"call_id": "serp", "tool": SERP_TOOL, "arguments": {"body": [{
         "keyword": keyword, "location_code": location, "language_code": language, "device": device, "depth": 10}]}}])
     items = (((data.get("serp") or {}).get("tasks") or [{}])[0].get("result") or [{}])[0].get("items") or []
-    results = [{"domain": re.sub(r"^www\.", "", i.get("domain") or ""), "url": i.get("url") or "", "title": i.get("title") or "",
-                "position": i.get("rank_group")} for i in items if i.get("type") == "organic"][:10]
-    for r in results:
-        r["kind"] = page_kind(r["domain"], r["url"], r["title"])
+    results = [result(i) for i in items if i.get("type") == "organic"][:10]
+    for r in results:                                        # a wrapped url has no readable path: the title decides
+        r["kind"] = page_kind(r["domain"], r["page"] if not r["wrapped"] else r["url"], r["title"])
     return {"results": results, "ads": any(i.get("type") == "paid" for i in items),
             "features": sorted({i["type"] for i in items if i.get("type") not in ("organic", "paid")}),
             "forums": threads(results, items)}, cost
@@ -102,8 +150,9 @@ def ratings(domains: list[str], state: Path) -> tuple[dict[str, int | None], int
         except goanyapi.GoAnyError:
             return d, None, 0
     cost = 0
+    rateable = {d for d in domains if d and not GOOGLE.match(d)}    # a redirect is not a competitor
     with ThreadPoolExecutor(WORKERS) as pool:
-        for d, data, spent in pool.map(one, sorted(set(domains) - set(fresh))):
+        for d, data, spent in pool.map(one, sorted(rateable - set(fresh))):
             cost += spent
             if data is not None:
                 fresh[d] = {"dr": data.get("domain_rating"), "day": today.isoformat()}
@@ -185,9 +234,9 @@ def assess(rows: list[dict], cfg: dict, state: Path) -> tuple[int, list[str]]:
                             "eased": bool(r.get("is_new")) and verdict(weak, kd) != verdict(weak, kd, True),
                             "location_code": c["location_code"],
                             # the ten results as read, for the SERP shape (radar/serpshape.py) to reuse
-                            "results": [{k: x[k] for k in ("domain", "url", "title", "position", "kind", "dr")} for x in rated],
+                            "results": [{k: x[k] for k in ("domain", "url", "page", "title", "position", "kind", "dr", "wrapped")} for x in rated],
                             "kinds": kinds, "features": p["features"], "forums": p.get("forums", []),
-                            "weakest": {k: weakest[k] for k in ("domain", "dr", "position", "url")} if weakest else None,
+                            "weakest": {**{k: weakest[k] for k in ("domain", "dr", "position")}, "url": address(weakest)} if weakest else None,
                             # the tool sites already ranking: ⑩ asks who else their owners run
                             "tools": [{"domain": x["domain"], "dr": x["dr"]} for x in rated if x["kind"] == "tool"][:5]}
         if r["decision"] == "prioritize" and r["competition"]["verdict"] == "crowded":

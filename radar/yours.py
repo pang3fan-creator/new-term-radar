@@ -20,7 +20,7 @@ from __future__ import annotations
 import re
 from datetime import date
 
-from . import gsc
+from . import competition, gsc
 
 PAGE_ONE = 10
 IMPROVE_MAX = 30
@@ -45,7 +45,7 @@ def is_mine(domain: str, mine: list[str]) -> bool:
 
 def on_page_one(row: dict, mine: list[str]) -> dict | None:
     hit = next((x for x in (row.get("competition") or {}).get("results") or [] if is_mine(x["domain"], mine)), None)
-    return {"position": hit["position"], "url": hit["url"]} if hit else None
+    return {"position": hit["position"], "url": competition.address(hit)} if hit else None
 
 
 def action(serp: dict | None, console: dict | None) -> str:
