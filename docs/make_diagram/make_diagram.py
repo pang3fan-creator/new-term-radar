@@ -1,11 +1,11 @@
-"""The radar's flow as an animated SVG and a GIF: dots travel the connectors.
+"""The radar's flow as one still PNG, Chinese only.
 
-  python docs/make_diagram.py <oss-zh|oss-en> <out-basename> [--plain]
+  python docs/make_diagram/make_diagram.py <out-basename>      # 见 README，输出 <out-basename>.png
 
 What 0.6.0 added (the keyword table's new readings, the new sites' first words, AI answers on ⑦,
 three more payment platforms and the builders on ⑧, ⑨ just listed, ⑩ money, the side evidence) is drawn
-in purple, with a NEW tag; --plain draws it like the rest.
-rsvg-convert renders each frame (it does not run SVG animation) and ffmpeg joins them.
+in purple, with a NEW tag. The picture is the animation's frame at 2 s, where a dot sits on every
+connector: rsvg-convert renders it, and does not run SVG animation.
 """
 import math, subprocess, sys, tempfile
 from pathlib import Path
@@ -47,32 +47,6 @@ ZH = {
     "tag": "新增",
     "legend": ("信号与取证", "报告产出", "新词表", "0.6.0 新增", "命中率写回日报"),
 }
-EN = {
-    "s1": ("① X and HF", "every 8 hours", "trending HF Spaces"), "s2": ("② GitHub", "breakout repos"),
-    "s3": ("③ Sitemaps", "new pages · new sites", "8 AI tool directories", "+new sites' top-20 words"), "s4": ("④ Search Console", "optional"),
-    "s6": ("⑥ What people pay for", "TrustMRR · weekly", "fastest growing · from $0"),
-    "s7": ("⑦ Reddit asks", "12 phrasings · weekly", "the jobs people want done", "+what ChatGPT recommends"),
-    "s8": ("⑧ Started selling", "payment links · weekly", "+8 platforms · builders"),
-    "judge": ("Name judge: a name, or a word?", "a score of 0.5 or more stays", "format: video>voice>image · ⚡ one-click"),
-    "known": ("Drop the terms you already cover",),
-    "readings": ("Word age · Markets · Page-one shape · 12 months", "first searched · US DE FR JP volume + KD · best market",
-                 "top-10 shape · threads and AI overview · exact-match .com", "your rank → update, improve or new page"),
-    "sources": ("Sources report (every 8 h)", "only on a new name", "with the posts"),
-    "table": ("Keyword table: names + generic terms", "model phrases → screen → volume → Trends"),
-    "page": ("Page one", "weak sites · KD · ads · pages built · advertisers", "a crowded \"prioritize\" becomes \"watch ↓\""),
-    "evidence": ("Evidence (AIsa)", "top posts · README", "a paying product's own words"),
-    "goany": ("GoAnyAPI (optional)", "related queries · US curve", CREDIT_SOURCE),
-    "daily": ("Daily report (once a day)", "keyword table first · leads in radar.db", "⑥ revenue · ⑦ asks · ⑧ sellers · ⚡ viewers ask",
-              "+⑨ just listed · ⑩ money · side evidence"),
-    "review": ("DataForSEO Trends check, 14 days later", "names and generic terms · last two days left out"),
-    "credit": f"Idea: {CREDIT_TABLE}",
-    "use_h": "Four ways in, one engine",
-    "use": [("Command line", "daily · sources", "keywords · leads"), ("3 Agent Skills", "one run,", "or its two halves"),
-            ("MCP server", "leads · keyword table", "run"), ("pains command", "Chrome reviews", "Reddit · tutorials")],
-    "tag": "NEW",
-    "legend": ("signals", "reports", "keyword table", "new in 0.6.0", "hit rate fed back"),
-}
-VARIANTS = {"oss-zh": ZH, "oss-en": EN}
 
 
 def width(text, size):   # a CJK glyph is about a square, a Latin one about half
@@ -189,26 +163,16 @@ def at(points, f):
     return points[-1]
 
 
-def main(variant, base, marks=True):
-    head, body = scene(VARIANTS[variant], marks)
-    colour = lambda c, new: c if marks or not new else "#888780"  # noqa: E731
-    smil = "\n".join(f'<circle r="{4.5 if new and marks else 4}" fill="{colour(c, new)}"><animateMotion dur="{dur}s" repeatCount="indefinite" '
-                     f'begin="{b}s"><mpath href="#{i}"/></animateMotion></circle>' for i, _, c, _, new, dur, b in PATHS)
-    Path(base + ".svg").write_text(head + body + smil + "\n</svg>\n")
-    fps, seconds = 15, 4.8
+def main(base, at_seconds=2.0):
+    """Writes `<base>.png`: the frame the animation was stilled on, a dot on every connector."""
+    head, body = scene(ZH, True)
+    dots = "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4.5" fill="{c}"/>'
+                   for _, p, c, _, new, dur, b in PATHS for x, y in [at(p, ((at_seconds - b) % dur) / dur)])
     with tempfile.TemporaryDirectory() as tmp:
-        for n in range(int(fps * seconds)):
-            tm = n / fps
-            dots = "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{4.5 if new and marks else 4}" fill="{colour(c, new)}"/>'
-                           for _, p, c, _, new, dur, b in PATHS for x, y in [at(p, ((tm - b) % dur) / dur)])
-            f = Path(tmp) / f"f{n:03d}.svg"
-            f.write_text(head.replace("context-stroke", "#888780") + body + dots + "\n</svg>\n")
-            subprocess.run(["rsvg-convert", "-w", str(W * 2), "-b", "white", str(f), "-o", str(f.with_suffix(".png"))], check=True)
-        frames = ["-y", "-loglevel", "error", "-framerate", str(fps), "-i", f"{tmp}/f%03d.png"]
-        subprocess.run(["ffmpeg", *frames, "-vf", "scale=1140:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96[p];[b][p]paletteuse=dither=none",
-                        base + ".gif"], check=True)
-        subprocess.run(["cp", f"{tmp}/f030.png", base + ".png"], check=True)
+        f = Path(tmp) / "radar.svg"
+        f.write_text(head.replace("context-stroke", "#888780") + body + dots + "\n</svg>\n")
+        subprocess.run(["rsvg-convert", "-w", str(W * 2), "-b", "white", str(f), "-o", base + ".png"], check=True)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2], marks="--plain" not in sys.argv)
+    main(sys.argv[1])

@@ -1,10 +1,8 @@
 <div align="center">
 
-<img src="docs/logo.svg" width="128" alt="new-term-radar logo: a radar sweep catching a new blip">
+# new-term-radar（新词雷达）
 
-# new-term-radar
-
-**Catch the names AI people are about to search for, the day they appear, before keyword tools list them.**
+**AI 圈马上要被搜的新名字，出现当天就抓到，赶在关键词工具收录之前。**
 
 [![PyPI](https://img.shields.io/pypi/v/new-term-radar?color=0ea5e9&label=PyPI)](https://pypi.org/project/new-term-radar/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab)](https://pypi.org/project/new-term-radar/)
@@ -22,336 +20,331 @@
 [![ClawHub](https://img.shields.io/badge/ClawHub-new--term--radar-f97316)](https://clawhub.ai/skills/new-term-radar)
 [![skills.sh](https://img.shields.io/badge/skills.sh-zhuyansen%2Fnew--term--radar-0f172a)](https://skills.sh/zhuyansen/new-term-radar)
 
-⭐ **700+ stars on its first day, 1,000 in just over three** · on PyPI, the official MCP Registry, Cursor Directory, LobeHub, Tessl, ClawHub and skills.sh
+⭐ **首日 700+ 星，3 天出头破 1000** · 已上 PyPI、官方 MCP Registry、Cursor Directory、LobeHub、Tessl、ClawHub、skills.sh
 
-[Quick start](#quick-start) · [What it reads](#what-it-reads) · [The keyword table](#the-keyword-table) · [Agents and MCP](#use-it-from-an-agent-skills-and-an-mcp-server) · [config.json](#configjson) · [中文说明](README.zh-CN.md)
+[快速开始](#快速开始) · [它读什么](#它读什么) · [新词表](#新词表) · [在 agent 里用](#在-agent-里用skill-和-mcp-服务器) · [config.json](#configjson)
 
 </div>
 
-A daily report of the names that are starting to surge in AI: new models, products, tools and repos, caught where they are said first, before they show up in keyword tools.
+每天一份报告，列出 AI 领域里刚开始冒头的名字：新模型、新产品、新工具、新仓库。在它们最早被说出来的地方抓，而不是等关键词工具里有数据再看。
 
-Built for people who make pages, posts or products around new terms: SEO for AI tool sites, newsletters, directories, anyone who wants to know about "Strata" or "Seedance" the day it appears and not two weeks later.
+适合围绕新词做页面、写内容、做产品的人：AI 工具站的 SEO、Newsletter、导航站，或者任何想在「Strata」「Seedance」出现当天就知道、而不是两周后才知道的人。
 
-## Why
+## 为什么做这个
 
-A new name leaves a trail, in this order:
+一个新名字会按这个顺序留下痕迹：
 
-1. A lab or a well-followed account says it on X; a model enters Hugging Face's trending list.
-2. One GitHub repo takes off on its own.
-3. Directories and competitors add pages for it; someone registers a domain for it and the site starts to rank.
-4. Your own site gets its first search impressions for it.
-5. Google Trends shows the curve, days or weeks later.
+1. 实验室或大号在 X 上先说出来；模型进入 Hugging Face 热门榜。
+2. GitHub 上某一个仓库自己涨起来。
+3. 导航站和竞品给它加页面；有人为它注册域名，新站开始有排名。
+4. 你自己的站第一次因为这个词有了搜索曝光。
+5. Google Trends 上出现曲线，这已经是几天到几周之后了。
 
-Keyword tools read step 5. This radar reads steps 1 to 4 every day and uses step 5 only to check itself.
+关键词工具读的是第 5 步。这个雷达每天读第 1 到 4 步，第 5 步只用来复盘自己准不准。
 
-One example it was built around: [Niko1221/Strata](https://github.com/Niko1221/Strata) was created on 2026-09-24 and had 7,700 stars nine days later. People were searching "niko strata" from 9/26, while no second repo carried the name and no keyword tool listed it. A single repo gaining 800 stars a day is the whole signal, and it is public.
+它最初就是照着一个例子做的：[Niko1221/Strata](https://github.com/Niko1221/Strata) 创建于 2026-09-24，九天后 7,700 星。9 月 26 日起就有人在搜「niko strata」，而当时没有第二个仓库用这个名字，关键词工具里也查不到。一个仓库每天涨 800 星，这本身就是全部信号，而且是公开的。
 
-## What it reads
+## 它读什么
 
-![How the radar works: six signals, a name judge, the keyword table with its page-one check, a daily report and a 14-day check; used from the command line, three Agent Skills, an MCP server or the pains command. What 0.6.0 added is purple and tagged NEW](docs/radar.en.gif)
+![雷达的流程：六类信号、名字判断、带首页竞争的新词表、日报和 14 天复核；四种用法：命令行、3 个 Agent Skill、MCP 服务器、pains 痛点命令。0.6.0 新增的部分是紫色并标了「新增」](docs/make_diagram/radar.zh.png)
 
-Purple, tagged NEW: what 0.6.0 added. On the keyword table: word age, markets, page-one shape, the twelve months, your own rank, what else holds page one (threads, an AI overview) and the exact-match .com. The first words ③'s new sites rank for, what ChatGPT recommends for ⑦'s asks, three more payment platforms and the builders on ⑧, ⑨ just listed, ⑩ money and the evidence beside the names. All of it is in [CHANGELOG.md](CHANGELOG.md).
+紫色、标「新增」的是 0.6.0 加的。新词表上：词龄、多市场、首页形态、12 个月走势、你自己的排名、首页上还有什么（讨论帖、AI 概览）、精确匹配的 .com。另外还有：③ 新站最先排上的词，⑦ 求助里 ChatGPT 推荐什么工具，⑧ 多了三家收款平台和建站作品，⑨ 新上架，⑩ 付费信号，以及新名字的旁证。完整列表见 [CHANGELOG.md](CHANGELOG.md)。
 
-| Signal | What it catches | Needs | Cost |
+| 信号 | 抓什么 | 需要 | 花费 |
 |---|---|---|---|
-| ① X | Names the accounts in your list used for the first time in 60 days | AIsa key | $0.003 per account per run |
-| ① Hugging Face | Models and Spaces (the demos people try) new to the trending top 50; quantised copies and a model's own demo grouped under the base name | nothing | free |
-| ② GitHub breakout | A repo under 14 days old averaging 200+ stars a day, or +400 since yesterday; adds the search variants people use ("niko strata") | nothing (a GitHub token raises the rate limit) | free |
-| ③ Sitemaps | Words that several new URLs on a site share and its older URLs rarely carried. The example config watches eight AI tool directories (toolify, aixploria, ai-bot.cn, opentools, dang.ai, clipfly, aitoptools, futurepedia) and four MCP and skill directories | the sitemaps you list | free |
-| ③ New sites | Domains registered and first indexed in the last 90 days that already rank for 20+ keywords, each new one with the first words it ranks for in Google's top 20, in any country: searches a site that new already reached | AIsa key | about $0.13 per query, weekly; about $0.013 a new site for its words |
-| ⑦ Asks | What people ask for on Reddit ("is there an AI tool that…", twelve phrasings), X, Stack Exchange (Software Recommendations and three more) and Freelancer.com: a model keeps the requests and complaints an AI tool could answer and writes each job as people would search it; jobs with searches get the page-one check | AIsa key | about $0.12 a week, plus a few cents for X |
-| ⑧ Sellers | Sites that just put up their first payment link (Stripe Payment Links, Polar, Lemon Squeezy, Gumroad, Creem, Paddle, Dodo Payments, Waffo Pancake), from the public link graph with the day each site first linked; new pages of old sellers, platform pages, forums and one link shared by several new sites (a network's) left out; the site's own description goes to the keyword table, and with GoAnyAPI its visits, its domain's registration and where its visitors come from (the AI share) | AIsa key; GoAnyAPI optional | about $0.50 a week |
-| ⑧b Builders | Sites just built with Lovable or v0 and newsletters just started on beehiiv, read off their badges; only the software among them becomes a lead | AIsa key | about $0.15 a week |
-| ⑨ Just listed | New on Product Hunt, Show HN, OpenRouter, Civitai, the App Store's top-grossing charts and awesome lists (free); weekly, the pages Google indexed under Figma plugins, There's An AI For That and the Chrome Web Store, trending searches on Douyin, TikTok and Reddit, and rising searches next to root words ("ai generator") | nothing for the free lists; AIsa and GoAnyAPI keys for the rest | free; about $0.02 a path, $0.001 a trending list, 6 GoAnyAPI credits a root word |
-| ⑩ Money | The other sites on a paying tool site's AdSense account (its owner's other niches), and the advertisers new on your own terms (Google Ads Transparency) | GoAnyAPI key | 3 credits a site each way, 4 a term; weekly |
-| Beside the names | For the day's strongest new names: new domains carrying the name (whois, or crt.sh certificates), Wikipedia views, what Google knows it as, Discord servers; for paying products, the "alternative", "vs", "free", "pricing" and "review" searches | AIsa key; GoAnyAPI for Discord | about $0.12 a name read by whois, $0.09 for the searches |
-| ⑥ Revenue | Products people pay for, from TrustMRR's verified revenue: the fastest growing ($500+ in 30 days) and the newest listings; one at $0 last time and earning now is called out first. Its own description goes to the keyword table as evidence | TrustMRR key | free, 6 requests, weekly |
-| ④ Search Console | Queries your site got impressions for, for the first time (fresh data) | your own Google token | free |
-| ⑤ Review | Each lead checked in DataForSEO Trends 14 days later, against its own baseline; hit rate and days ahead per signal | AIsa key | $0.0012 per search variant |
-| Keyword table | For the day's new names: the generic search terms behind them (what people do with the new thing), each sized, checked for room on page one, and given a decision | AIsa key; [GoAnyAPI](https://goanyapi.com) key optional | about $0.18 a day for 5 names, $0.30 with GoAnyAPI |
-| Name judge | A small model scores every term: the name of one specific thing, or a common word? | AIsa key | a fraction of a cent per run |
+| ① X | 你关注的账号里，60 天内第一次出现的名字 | AIsa key | 每个账号每次 $0.003 |
+| ① Hugging Face | 新进热门榜前 50 的模型和 Space（大家实际在试的 demo）；量化版、微调版和模型自己的 demo 归到同一个基础名下 | 无 | 免费 |
+| ② GitHub 爆发 | 创建不到 14 天、平均每天涨 200 星以上，或比昨天多 400 星的仓库；附带大家实际会搜的写法（「niko strata」） | 无（有 GitHub token 限额更高） | 免费 |
+| ③ 竞品 sitemap | 某个站新增的几个网址共用、而它的旧网址里很少出现的词。示例配置盯着 8 个 AI 工具导航站（toolify、aixploria、ai-bot.cn、opentools、dang.ai、clipfly、aitoptools、futurepedia）和 4 个 MCP、skill 目录 | 你列出的 sitemap | 免费 |
+| ③ 新站 | 近 90 天注册且首次被收录、已经有 20 个以上排名词的域名；每个新出现的站附上它最先排进 Google 前 20 的词，不限国家：这么新的站已经够得着的搜索 | AIsa key | 每个查询约 $0.13，每周一次；每个新站查词约 $0.013 |
+| ⑦ 求助 | Reddit 上大家在要什么（"is there an AI tool that…" 等 12 种问法），还有 X、Stack Exchange（Software Recommendations 等 4 个站）和 Freelancer.com 上的：模型留下 AI 工具能解决的求助和抱怨，把每件事写成大家会搜的说法；有搜索量的再做首页竞争检查 | AIsa key | 每周约 $0.12，X 另加几美分 |
+| ⑧ 新卖家 | 刚挂上第一条收款链接的站（Stripe Payment Links、Polar、Lemon Squeezy、Gumroad、Creem、Paddle、Dodo Payments、Waffo Pancake），来自公开外链数据，带这个站第一次挂链接的日期；老卖家的新页面、平台上的用户页、论坛，以及好几个新站共用的同一条链接（站群）都不算；站点自己的介绍交给新词表，有 GoAnyAPI 时还有访问量、域名注册日期和访客来源（含 AI 占比） | AIsa key；GoAnyAPI 可选 | 每周约 $0.50 |
+| ⑧b 新作品 | 刚用 Lovable、v0 做出来的站，刚在 beehiiv 开张的 newsletter，从它们挂的徽章认出来；只有其中的软件才进线索 | AIsa key | 每周约 $0.15 |
+| ⑨ 新上架 | Product Hunt、Show HN、OpenRouter、Civitai、App Store 畅销榜和 awesome 列表上的新条目（免费）；每周一次：Google 新收录的 Figma 插件、There's An AI For That、Chrome 应用商店页面，抖音、TikTok、Reddit 热搜，以及词根旁边正在上升的搜索（"ai generator"） | 免费列表不用 key；其余要 AIsa 和 GoAnyAPI 的 key | 免费；每个路径约 $0.02，每份热搜 $0.001，每个词根 6 个 GoAnyAPI 积分 |
+| ⑩ 付费信号 | 一个付费工具站的 AdSense 账户名下的其他站（站长的其他赛道），以及你关注的词上新出现的广告主（Google 广告透明度中心） | GoAnyAPI key | 每个站双向各 3 积分，每个词 4 积分；每周一次 |
+| 新名字的旁证 | 当天最强的几个新名字：带这个名字的新域名（whois，或 crt.sh 的新证书）、维基百科浏览量、Google 把它认作什么、Discord 服务器；付费产品则查「alternative」「vs」「free」「pricing」「review」这些搜索 | AIsa key；Discord 要 GoAnyAPI | whois 每个名字约 $0.12，搜索量 $0.09 |
+| ⑥ 收入 | 有人付钱的产品，来自 TrustMRR 核验过的收入：增长最快的（30 天收入 $500 以上）和最新上榜的；上次 $0、这次过了门槛的排最前。它自己的介绍会作为依据交给新词表 | TrustMRR key | 免费，6 次请求，每周一次 |
+| ④ Search Console | 你的站第一次获得曝光的查询词（用新鲜数据） | 你自己的 Google 授权 | 免费 |
+| ⑤ 复盘 | 每条线索 14 天后去 DataForSEO Trends 核对，和它自己的基线比；按信号统计命中率和提前天数 | AIsa key | 每个搜索写法 $0.0012 |
+| 新词表 | 针对当天的新名字:找出它背后的通用搜索词(大家拿这个新东西做什么),逐个估算规模、看首页还有没有位置,并给出决策 | AIsa key；[GoAnyAPI](https://goanyapi.com) key 可选 | 5 个名字约每天 $0.18，加上 GoAnyAPI 约 $0.30 |
+| 名字判断 | 小模型给每个词打分：是某个具体东西的名字，还是普通词？ | AIsa key | 每次不到一美分 |
 
-Prices are what AIsa charged in October 2026. With the example config (35 X accounts read three times a day, the keyword table for 5 names a day) a month costs about $15: $10 for the X reads, $5 for the keyword table. Read fewer accounts, or read them once a day, and it drops in proportion.
+价格是 2026 年 10 月 AIsa 的实际收费。按示例配置（35 个 X 账号、每天读三次，新词表每天读 5 个名字），一个月约 $15：读 X 约 $10，新词表约 $5。少读几个账号或者每天只读一次，费用按比例下降。
 
-## The keyword table
+## 新词表
 
-A name is half of what you need. "SynthID Detector" has a short life as a keyword and belongs to Google; the job it does, "ai image detector", is what people keep searching, and nobody owns it. Each day the radar reads the new names once more and writes one table with both:
+只有名字是不够的。「SynthID Detector」作为关键词寿命短，而且是 Google 的；它做的那件事「ai image detector」才是大家会一直搜的词，而且不属于任何人。雷达每天会把新名字再读一遍，把两种词写进同一张表：
 
 ```
-| Keyword | Type | Behind | New? | Est. searches/day | Started rising | Peak vs gpts | Peak day | Last 7 days vs the 7 before | Now | First searched | Markets (searches/KD) | Page one | Page-one shape | Decision |
-| **photocraft** 🖼 | name | — | yes | 12747 | 2026-10-05 | 97 vs 3.1 | 2026-10-09 | — | still rising | 2026-10-04 🆕 | **best US** · US 110/0 · DE 20/0 · FR 20/0 · JP 10/31 | — | beatable · 1 home / 6 inner · 2 platform · exact title ×6 | **prioritize** |
-| **ai image detector** 🖼 | generic | synthid detector | no | 2537 | — | 87 vs 31.6 | 2026-10-04 | ×1.2 | flat | 2023-02-19 | **best US** · US 74k/37 · DE 3.6k/48 · FR 2.9k/47 · JP 720/31 | — | — | watch |
-| **photoshop alternative** ⚠ | generic | photocraft | no | 244 | — | 61 vs 61.7 | 2026-10-08 | ×1.8 | flat | — | — | — | — | skip |
+| 关键词 | 类型 | 来自 | 新词? | 估算日搜 | 开始上涨 | 峰值 vs gpts | 峰值日 | 近 7 天比前 7 天 | 现在 | 首次有搜索 | 市场(月搜/KD) | 首页竞争 | 首页结构 | 决策 |
+| **photocraft** 🖼 | 名字 | — | 是 | 12747 | 2026-10-05 | 97 vs 3.1 | 2026-10-09 | — | 还在涨 | 2026-10-04 🆕 | **最佳 US** · US 110/0 · DE 20/0 · FR 20/0 · JP 10/31 | — | 可超越 · 1 首页 / 6 内页 · 2 平台 · 标题含原词 ×6 | **优先** |
+| **ai image detector** 🖼 | 通用词 | synthid detector | 否 | 2537 | — | 87 vs 31.6 | 2026-10-04 | ×1.2 | 没动 | 2023-02-19 | **最佳 US** · US 74k/37 · DE 3.6k/48 · FR 2.9k/47 · JP 720/31 | — | — | 观察 |
+| **photoshop alternative** ⚠ | 通用词 | photocraft | 否 | 244 | — | 61 vs 61.7 | 2026-10-08 | ×1.8 | 没动 | — | — | — | — | 跳过 |
 ```
 
-(a real run, 2026-10-12, shortened; the Page one column came later, and First searched, Markets and Page-one shape in 0.6.0, from a run of 2026-10-18, see below. 0.6.0 also adds a `12 months` column after `Now` and an action after the decision, `→ update yours`, `→ improve yours` or `→ new page`: 10 to 13 below.)
+（2026-10-12 一次真实运行的节选；「首页竞争」一列是后来加的，「首次有搜索」「市场」「首页结构」是 0.6.0 加的，取自 2026-10-18 的一次运行，见下。0.6.0 还在「现在」后面加了「近 12 个月」一列，决策后面加了动作：`→ 更新现有页`、`→ 改进现有页` 或 `→ 新建页面`，见下面 10 到 13。）
 
-How it is made (`radar/usecases.py`):
+它是怎么做出来的（`radar/usecases.py`）：
 
-1. **Evidence**: the most-liked posts that mention the name (X advanced search) and, for a repository, its README.
-2. **Phrases**: a model reads the evidence and writes the keyword an ordinary person would type for each job it sees people doing, with a quote that backs it. A phrase built on another product's name ("photoshop alternative") is kept and marked ⚠: demand often hangs on the incumbent, and whether to use someone's brand is your call.
-   With a GoAnyAPI key (optional, below) the radar also takes **Google Trends' related queries** for the name: what people really searched together with it. For SynthID Detector that gave "ai photo detector", "google ai detector" and "ai detector"; these rows carry 🔎. Queries that hold the name are listed as its long-tails ("photocraft download", "nano banana 2.1 vs pro"). Queries that are themselves the names of other rising things ("gpt image 2.5" beside "nano banana 2.1") are kept as leads of their own.
-3. **Screen**: a second call scores how well the name answers each phrase, marks brands, and spots the names of other things; the loosely related ones are dropped. For Claude Haiku 5.5 it dropped all six proposed ("ai coding assistant", "github copilot alternative"); for SynthID Detector it kept all five.
-4. **Volume**: Google Ads monthly searches for the rest, one batch call. Phrases under `min_volume` are dropped; most are.
-5. **Trends**, twice per row: the term alone gives the shape (new or not, the day it started rising, the peak, the last week against the week before, what it is doing now); the term beside a benchmark keyword (`gpts` by default) gives the size.
-6. **Page one**, for the rows that would be acted on (eight at most): Google's first page (about $0.002 a keyword), the rating of each site on it (GoAnyAPI, $0.002 a site, kept 30 days) and the keyword difficulty ($0.012 a call). With a GoAnyAPI key also who already builds for the term and who pays for it: the pages Google holds with it in the title from the last month (`pages built`) and the domains running Google ads on it (`advertisers`, from Ads transparency), $0.008 a row. `open` = three or more of the ten results sit on sites rated under 30, or difficulty under 20; `crowded` = none does and difficulty is 40 or more; `mixed` in between. Under the table it names the weakest site on page one, where a new page can get in, and what kinds of pages hold it (tools, lists, articles, videos, forums). Ads on the page mean someone pays for that click. Recorded only, in report.json as `page_age` and not used in any decision yet: how old the sites on page one are (each domain's registration, from RDAP, free) and which results entered the top 10 since the reading before, to check later whether a page one with young sites on it is one a new site gets onto.
+1. **取证**：搜提到这个名字的高赞帖子（X 高级搜索）；如果是仓库，再读它的 README。
+2. **提词**：模型读完证据，针对它看到的每一种用法，写出普通人会搜的关键词，并附上原话作依据。借别的产品名字的写法（「photoshop alternative」）会保留并标 ⚠：需求常常挂在老牌产品上，要不要用别人的品牌由你判断。
+   如果配了 GoAnyAPI 的 key（可选，见下），雷达还会取这个名字在 **Google Trends 里的相关查询**：大家实际把什么词和它一起搜。SynthID Detector 拿到的是「ai photo detector」「google ai detector」「ai detector」，这些行带 🔎。包含名字本身的查询列为它的长尾（「photocraft download」「nano banana 2.1 vs pro」）。本身是别的新东西名字的查询（「nano banana 2.1」旁边的「gpt image 2.5」）单独记为线索。
+3. **筛选**：再调一次模型，给每个写法打分：这个名字能不能回答这个搜索；同时标出品牌、认出别的东西的名字。关系不够直接的丢掉。Claude Haiku 5.5 提出的 6 个全被筛掉（「ai coding assistant」「github copilot alternative」）；SynthID Detector 的 5 个全部保留。
+4. **搜索量**：一次批量查询，取剩下写法的 Google Ads 月搜索量。低于 `min_volume` 的丢掉，大部分都会被丢掉。
+5. **Trends**，每行查两次：单独查这个词，得到曲线形状（是不是新词、哪天开始涨、峰值、近 7 天比前 7 天、现在的走势）；和基准词（默认 `gpts`）放在一起查，得到规模。
+6. **首页竞争**，只查会被采取行动的行（最多 8 行）：Google 第一页（每词约 $0.002）、第一页上每个站的评分（GoAnyAPI，每站 $0.002，保留 30 天）和关键词难度（每次 $0.012）。有 GoAnyAPI key 时，还会看谁已经在为这个词做东西、谁在为它付钱：近一个月标题里带这个词的页面数（「已有页面」）和在这个词上投谷歌广告的域名（「在投广告」，来自广告透明度），每行 $0.008。`能进` = 前十里有 3 个以上评分低于 30 的站，或难度低于 20；`挤满` = 一个弱站都没有、难度 40 以上；其余为 `一般`。表下面会列出首页最弱的那个站（新页面最容易挤进去的位置），以及首页由哪类页面构成（工具、榜单、文章、视频、论坛）。首页有广告，说明有人在花钱买这个点击。只记录、不参与判断（report.json 里的 `page_age`）：第一页上的站分别是什么时候注册的（RDAP 查注册日期，免费），以及和上一次读这个词相比新进前十的结果，留着以后验证「第一页上有新站的词，新站是不是更容易进」。
 
-7. **Word age**, for the prioritize and watch rows: the term's Trends interest over five years (one point a week); the first week with any interest is `First searched`, and 🆕 marks a term first searched in the last 180 days. A new term's page one is read one step easier (crowded → mixed, mixed → open): difficulty scores and site ratings are made from pages written for something else and lag a word nobody searched half a year ago. The week still running and Trends' unsettled last two days are left out, so a "0, 100" tail cannot make an old word look new. One Trends task a row, $0.0012. A term made of words people searched before ("nano banana" reads a little interest in 2021) is dated by those older searches.
-8. **Markets**, for the same rows: Google Ads monthly searches in each market of `markets.codes` (US, DE, FR, JP by default; all languages) and, with `difficulty` on, the keyword difficulty there, in one compact cell: `best DE · US 5k/50 · DE 900/5 · FR 300 · JP 0 · top Germany`. `best` = the most searches per point of difficulty when every market with searches has a difficulty, else the most searches. `top` = the country where Trends interest is highest, among the major markets (Trends measures a share of local searches, and on its own puts Sint Maarten first). About $0.41 a run with the defaults (a $0.09 volume call per market, about $0.012 a difficulty call), plus $0.0024 a row for the top region.
-9. **Page-one shape**, for the prioritized rows: the live top ten (US / en / desktop by default; the page-one check's own results are reused, so it usually costs nothing extra, otherwise about $0.002 a term) read as homepages against inner pages, results on high-authority platforms (`serp_shape.platforms`: github.com, medium.com, sites.google.com, `*.github.io`, reddit.com, youtube.com, wikipedia.org) and titles that hold the keyword. `platform-held` = half or more on platforms; `beatable` = mostly inner pages and no exact-match homepage (a homepage titled with the term, or whose domain spells it); `contested` otherwise. Under the table it lists the URL and title of #1 and #2.
+7. **词龄**，只查「优先」和「观察」的行：取这个词 5 年的 Trends 热度（每周一个点），第一个有热度的那一周就是「首次有搜索」，180 天以内的标 🆕。新词的首页竞争放宽一档读（挤满 → 一般，一般 → 能进）：难度分数和站点评分都是按为别的东西写的页面算的，跟不上半年前还没人搜的词。还没过完的那一周和 Trends 没结算的最后两天不计，所以「0, 100」这种尾巴不会让老词看起来像新词。每行一次 Trends 查询，$0.0012。由老词拼成的词（「nano banana」在 2021 年就有一点热度）会按那些更早的搜索来定年龄。
+8. **市场**，同样只查这些行：`markets.codes` 里每个市场（默认 US、DE、FR、JP，不限语言）的 Google Ads 月搜索量，`difficulty` 打开时还有当地的关键词难度，压成一格：`最佳 DE · US 5k/50 · DE 900/5 · FR 300 · JP 0 · 热度最高 Germany`。`最佳` = 所有有搜索量的市场都有难度时，按每点难度对应的搜索量选；否则按搜索量选。`热度最高` = Trends 热度最高的国家，只在主要市场里选（Trends 量的是当地搜索的占比，不加限制会把荷属圣马丁排第一）。默认配置每次约 $0.41（每个市场一次 $0.09 的搜索量查询，难度每次约 $0.012），热度最高国家每行另加 $0.0024。
+9. **首页结构**，只查「优先」的行：实时前十（默认 US / en / 桌面；首页竞争那一步已经查过就直接复用，通常不额外花钱，否则每词约 $0.002），看首页和内页各几个、有几个在高权重平台上（`serp_shape.platforms`：github.com、medium.com、sites.google.com、`*.github.io`、reddit.com、youtube.com、wikipedia.org）、标题里含关键词的有几个。`平台占据` = 一半以上在平台上；`可超越` = 大多是内页，且没有精确匹配的首页（标题含这个词、或域名就是这个词的首页）；其余为 `有争夺`。表下面列出第 1、2 名的网址和标题。
 
-Each of the three has `"enabled": false` in its config block to turn it off. On 2026-10-18, for "photocraft" (prioritize) and "ai image detector" (watch), they read: first searched 2026-10-04 🆕 and 2023-02-19; best market US for both (74k searches and KD 37 for "ai image detector"); page one of "photocraft" `beatable · 1 home / 6 inner · 2 platform · exact title ×6`, held at #1 by the GitHub repository. The run cost $0.42.
+三项都可以在各自的配置块里设 `"enabled": false` 关掉。2026-10-18 对「photocraft」（优先）和「ai image detector」（观察）实测：首次有搜索分别是 2026-10-04 🆕 和 2023-02-19；两者最佳市场都是 US（「ai image detector」月搜 7.4 万、KD 37）；「photocraft」的首页结构是 `可超越 · 1 首页 / 6 内页 · 2 平台 · 标题含原词 ×6`，第 1 名是它的 GitHub 仓库。这次花了 $0.42。
 
-Four more readings came in 0.6.0 too. None of them buys anything: they read what the volume call and the page-one check already brought back, your own Search Console, and the .com registry.
+0.6.0 还加了四项读数，都不额外花钱：读的是搜索量查询和首页竞争检查已经拿回来的数据、你自己的 Search Console，以及 .com 的注册局。
 
-10. **12 months** (`year_curve`), every row with Google Ads data: the volume call already carries each phrase's last twelve months. The column draws them as bars on the term's own scale from zero and adds a word: `new since` (barely searched a year ago), `peaked` (a burst past its top: twice its median month or more, at half of it or less now), `falling`, `rising` (the last three months against the three before, ±30%) or `steady`; under 50 searches in its best month it says `few searches`, since Google Ads rounds small volumes. The newest month is one to two months behind. On 2026-10-20 "claude skills" read `peaked 2026-03, now -80%` (90,500 a month at the top, 18,100 in 2026-09), "best claude skills" `new since 2026-01 · falling, -47% in 6 mo`, and "skill md" `steady`.
-11. **Your rank** (`yours`), for the prioritize and watch rows: your sites (`yours.domains`, else the domain of the Search Console property in `gsc.site`) looked for in the page-one check's ten results and, with `gsc` set, in Search Console (average position, impressions and clicks for the exact query over 28 days, one call for all rows). The decision cell then says what to do: `→ update yours` (on page one by either), `→ improve yours` (a Search Console average of 11 to 30), `→ new page` (not found, or further down), and your pages are listed under the table. A rising term you already rank for is an update, not a new page. On 2026-10-20 one of our sites showed for one term at an average of 23.5 (improve that page) and for another at 89 with one impression, on its homepage (a new page).
-12. **What else holds page one**, from the page-one check: its cell now names an AI overview, an answer box, a forums block, videos or news, and under the table come the forum threads on page one, best-of searches first: an answer there reaches the people searching. When Google shows an AI summary, people click a result about half as often (Pew Research Center, 2025: on 8% of visits against 15%). All five "claude skills" terms read on 2026-10-20 had an AI overview.
-13. **Exact-match .com** (`dot_com`), for the prioritized rows, names first: the joined and hyphenated forms asked of the registry's RDAP (Verisign), free. Not registered is not always the usual price: registrars hold some names back or sell them as premium. Of the ten forms of five "claude skills" terms, one was free on 2026-10-20.
+10. **近 12 个月**（`year_curve`），所有有 Google Ads 数据的行：搜索量查询本来就带着每个词最近 12 个月的数据。这一列按这个词自己的最高月、从零画成柱，再加一句话：`X 起才有`（一年前几乎没人搜）、`冲高`（已过顶的爆发：峰值是中位月份的 2 倍以上，现在只剩一半以下）、`下降`、`上升`（最近三个月对比之前三个月，±30%）或 `平稳`；最高的一个月不到 50 就写 `搜索太少`，因为 Google Ads 会把小数字取整。最新一个月大约晚一到两个月。2026-10-20 实测：「claude skills」是 `2026-03 冲高，现在 -80%`（最高每月 90,500，2026-09 只有 18,100），「best claude skills」是 `2026-01 起才有 · 下降，6 个月 -47%`，「skill md」是 `平稳`。
+11. **你的排名**（`yours`），只查「优先」和「观察」的行：在首页竞争检查拿到的前十里找你的站（`yours.domains`，不填就用 `gsc.site` 那个 Search Console 资源的域名）；配了 `gsc` 的话再查 Search Console（这个词 28 天的平均排名、展示和点击，所有行一次查完）。决策格随后写出该做什么：`→ 更新现有页`（任一来源显示你在首页）、`→ 改进现有页`（Search Console 平均 11 到 30 名）、`→ 新建页面`（没找到，或排得更靠后），表下面列出你已有的页面。一个正在涨、你已经有排名的词，该做的是更新，不是新建。2026-10-20 实测：我们的一个站在一个词上平均第 23.5（改进那一页），在另一个词上是首页排第 89、只有 1 次展示（新建页面）。
+12. **首页上还有什么**，来自首页竞争检查：「首页竞争」那一格现在会标出 AI 概览、答案框、论坛模块、视频或新闻；表下面列出首页上的论坛帖，best 类搜索排前面：在那里回答能直接触达搜这个词的人。Google 给出 AI 摘要时，用户点结果的比例大约减半（皮尤研究中心 2025：8% 对 15%）。2026-10-20 查的 5 个「claude skills」相关词，首页全都有 AI 概览。
+13. **精确匹配的 .com**（`dot_com`），只查「优先」的行，名字优先：把连写和连字符两种写法拿去问注册局的 RDAP（Verisign），免费。未注册不等于能按常价买到：有些名字被注册商保留，或按溢价出售。2026-10-20 实测 5 个「claude skills」相关词的 10 种写法，只有一个没被注册。
 
-Each has `"enabled"` in its own config block; the page-one marks come with the page-one check. On 2026-10-20 five terms cost $0.11 in all, which was the volume call and the page-one check.
+每项都有自己的配置块和 `"enabled"` 开关；首页上的标记跟着首页竞争检查一起出。2026-10-20 实测 5 个词一共花了 $0.11，就是搜索量查询和首页竞争检查的钱。
 
-Searches a day are estimates. A generic term's come from its own Google Ads volume, moved to today along its own Trends curve. The benchmark is then sized from those terms, and a name, which has no volume data yet, is sized against the benchmark.
+日搜是估算值。通用词用它自己的 Google Ads 月搜索量，沿它自己的 Trends 曲线推到今天。再用这些词反推出基准词的规模，名字还没有搜索量数据，就对比基准词来估。
 
-Decision: **prioritize** = rose in the last 30 days, still up, at least `min_daily` searches a day. **watch** = rose but smaller, too early to read, or flat with steady demand of that size. **skip** = fading, or flat and small. A `prioritize` whose page one is `crowded` becomes `watch ↓`: still rising, but page one belongs to strong sites. In a name's first week page one is still forming (news, the maker's own pages); the second reading three days later is the one to trust.
+决策：**优先** = 近 30 天涨过、现在还在高位、估算日搜不低于 `min_daily`。**观察** = 涨了但规模小，或还太早读不出，或没动但本身有这个规模的稳定需求。**跳过** = 已回落，或没动且规模小。
 
-Marks: 🎬 video, 🎙 voice, 🖼 image says what the thing makes, the usual order of what visitors pay for (video > voice > image > text); leads of equal standing are sorted by it. ⚡ = a post with 1,000 or more likes walks through a manual workflow or rides a trend: a one-click tool nobody has built yet. Both come from keyword rules over the lead's own words and posts; on six known names (Nano Banana, Veo 3.1, Seedance 2.5, Claude Opus 5.5, ElevenLabs v4, Qwen Image 2.1) the format came out right for all six and ⚡ fired once, on a widely shared Opus 5.5 + Blender + Unreal walkthrough. Read the posts before acting on a mark.
+首页 `挤满` 的 **优先** 会降成 **观察 ↓**：还在涨，但首页被强站占满。新名字第一周的首页还在成形（新闻、官方页），以三天后第二次读到的为准。
 
-Each name is read twice, the day it appears and three days later, because on announcement day the posts are announcements and no use shows yet. The generic terms are kept as leads and reviewed after 14 days like the names.
+标记：🎬 视频、🎙 语音、🖼 图片 说明它产出什么，一般用户愿意付费的顺序是 视频 > 语音 > 图片 > 文字；同等条件的线索按这个排序。⚡ = 有 1,000 赞以上的帖子在手把手讲一套手动流程，或在跟一个热梗：还没人做成一键工具。两者都是按关键词规则从线索自己的字句和帖子里读出来的；在 6 个已知名字上（Nano Banana、Veo 3.1、Seedance 2.5、Claude Opus 5.5、ElevenLabs v4、Qwen Image 2.1）格式 6 个全对，⚡ 只触发一次，是一条被大量转发的 Opus 5.5 + Blender + Unreal 教程。按标记行动前先读原帖。
 
-What to expect from it, from the first eight names we ran it on:
+每个名字读两次：出现当天一次，三天后一次。因为发布当天的帖子都是公告，还看不出用法。通用词也会记进线索库，14 天后和名字一起复盘。
 
-- **The names rose; most generic terms did not, within five days.** PhotoCraft, Claude Haiku 5.5 and SynthID Detector all climbed clearly. Of the generic terms behind them, one moved: "photoshop alternative" ran about 80% above its level in the US for five days after PhotoCraft appeared. The worldwide daily series the table reads showed almost nothing of it (2, 1, 1, 2, 4, 2); a US daily series from another source showed it plainly. So a flat reading from the worldwide series does not prove a term did not move. With a GoAnyAPI key the bigger rows are read from the one-country series instead, where a rise is 1.5 times the earlier level held for three days; the same run then shows "photoshop alternative" as `still rising (US)`.
-- The table's dependable use today is to tell you **which existing demand a new thing serves and how big it is** ("ai image detector", about 2,500 searches a day). Whether generic terms follow the names is what the 14-day review will show, and we have no result yet.
-- For pure model releases (Claude Haiku 5.5, Nano Banana 2.1) the evidence was announcements and benchmarks, and the phrases proposed were weak ("ai coding assistant"). It works better for products and repositories that do one job.
-- **The worldwide Trends series' last two days are not settled.** For unrelated terms they came back as 0 and then 100, which reads as a spike. Our first pass was fooled by exactly this; every reader in the code now drops those two days, and a rise must last two days to count.
-- Google Ads volumes run about two months behind. Trends reads nothing reliable for terms under a few hundred searches a month.
+从我们最早跑的 8 个名字看，对它应该有这样的预期：
 
-### When a source is missing or down
+- **名字涨了；通用词在五天内大多没涨。** PhotoCraft、Claude Haiku 5.5、SynthID Detector 的搜索都明显上升。它们背后的通用词里有一个动了：PhotoCraft 出现后，「photoshop alternative」在美国连续五天比之前高出约 80%。这张表读的全球日数据几乎没反映出来（2、1、1、2、4、2），而另一个来源的美国日数据看得很清楚。所以全球数据显示「没动」，不能证明这个词真的没动。配了 GoAnyAPI 的 key 后，规模较大的行改读单个国家的数据，在那份数据里比之前高 50% 且持续三天算上涨；同一次运行里「photoshop alternative」就显示为 `还在涨 (US)`。
+- 这张表今天靠得住的用处，是告诉你**一个新东西对应的是哪个已有需求、这个需求有多大**（「ai image detector」约每天 2,500 次搜索）。通用词会不会跟着名字涨，要等 14 天复盘才知道，我们现在还没有结果。
+- 对纯模型发布（Claude Haiku 5.5、Nano Banana 2.1），证据都是公告和跑分，提出来的词很弱（「ai coding assistant」）。对只做一件事的产品和仓库效果更好。
+- **全球 Trends 曲线最后两天的数据没有结算。** 互不相关的词在这两天会依次返回 0 和 100，看起来像一个尖峰。我们第一遍就是被这个骗了；现在代码里所有读 Trends 的地方都会丢掉这两天，而且上涨必须持续两天才算数。
+- Google Ads 的搜索量滞后约两个月。月搜只有几百的词，Trends 基本读不出可靠的数。
 
-The table is still written, but it gets thinner, and it says which part is missing:
+### 某个数据源没配或挂了的时候
 
-| What happens | What the table loses | The line it prints |
+表照常产出，但会变薄，并且会写明缺了哪一块：
+
+| 情况 | 表里少了什么 | 表下面会出现的一行 |
 |---|---|---|
-| No `GOANYAPI_API_KEY` (the default) | The 🔎 rows, each name's long-tails, the other names searched alongside, and the `(US)` readings. Phrases come from the model alone and every curve from the worldwide series, where a real move can read flat | "Related queries are off: set GOANYAPI_API_KEY…" |
-| GoAnyAPI's Trends is down (seen on its first day in use, 2026-10-12) | The same as having no key, for that run | "Related queries failed for: …" and "Country series failed, worldwide data used instead: …" |
-| AIsa's post search fails for a name (timeouts seen twice on 2026-10-13) | That name's posts. A repository still has its README; a model or product without one is left with the related queries only, and with no GoAnyAPI key it gets no generic terms that day | "The post search failed; this run used READMEs and related queries only: …" |
-| Neither posts nor a README for a name | Its generic terms; the name's own row stays | "No posts or README found for: …" |
-| No lead that day is a thing with a name score of 0.8 or more | The whole table | "Nothing to read today…" |
-| AIsa's search-volume or Trends lookup fails | The whole table: these two are not replaceable | the error, in place of the table |
+| 没配 `GOANYAPI_API_KEY`（默认就是这样） | 没有 🔎 行、没有名字的长尾、没有「一起被搜的其他名字」、没有 `(US)` 走势。通用词只来自模型，走势全部读全球数据，真实的上涨可能被读成「没动」 | 「相关查询未开启：设置 GOANYAPI_API_KEY 后…」 |
+| GoAnyAPI 的 Trends 挂了（接入第一天 2026-10-12 就遇到过） | 这一次运行等同于没配 key | 「相关查询失败：…」和「国家数据获取失败，已退回全球数据：…」 |
+| 某个名字的 AIsa 推文搜索失败（2026-10-13 遇到两次超时） | 这个名字的推文证据。仓库还有 README 可用；没有 README 的模型或产品就只剩相关查询，如果又没配 GoAnyAPI，这一天它就没有通用词 | 「推文搜索失败，这次只用了 README 和相关查询：…」 |
+| 某个名字既没有推文也没有 README | 它的通用词；名字自己那一行还在 | 「没找到帖子或 README：…」 |
+| 当天没有名字得分 0.8 以上的「东西」类线索 | 整张表 | 「今天没有要读的名字…」 |
+| AIsa 的搜索量或 Trends 查询失败 | 整张表：这两项没有替代来源 | 表的位置直接显示报错 |
 
-A thin table is not a quiet day. Read the lines under it before you conclude that nothing moved.
+表变薄不等于今天没动静。下结论说「什么都没涨」之前，先看表下面这几行。
 
-Set `"usecases": {"per_day": 0}` or pass `--skip usecases` to turn it off.
+把配置写成 `"usecases": {"per_day": 0}`，或者加 `--skip usecases`，可以关掉它。
 
-### ⑥ Revenue: what people already pay for
+### ⑥ 收入：大家已经在付钱的东西
 
-A product that makes money proves the demand behind it. With `TRUSTMRR_API_KEY` set (from TrustMRR's developer dashboard), the radar reads once a week (`revenue.weekday`, Monday by default) the 30 fastest-growing products with at least `min_revenue_usd` ($500) in the last 30 days and the 30 newest listings, and keeps what it saw. The newest listings mostly earn next to nothing yet; they are read to record where they start, so a product at $0 last time that earns past the floor now is called out first. Hidden listings ("Anonymous startup") are left out, and a company's legal name gives way to its site's name ("Talent Tech Global Limited" is read as gptproto). Each product's own description goes to the keyword table as evidence, so the table reads the job people pay for, not only the brand. Growth above 1,000% reads "up from near $0": on the first run most of the fastest growers had started from almost nothing.
+一个能赚钱的产品，证明了它背后的需求。设置 `TRUSTMRR_API_KEY`（在 TrustMRR 的开发者后台生成）后，雷达每周读一次（`revenue.weekday`，默认周一）：近 30 天收入至少 `min_revenue_usd`（$500）、增长最快的 30 个产品，以及最新上榜的 30 个，并记下这次看到的。最新上榜的大多还几乎没收入，读它们是为了记下起点：上次 $0、这次过了门槛的产品会排在最前。隐藏的条目（"Anonymous startup"）不算；公司全称会换成网站名（"Talent Tech Global Limited" 读作 gptproto）。每个产品自己的介绍会作为依据交给新词表，于是新词表读出的是大家付钱买的那件事，而不只是品牌名。增长超过 1,000% 的显示为「从接近 $0 涨起来」：第一次运行时，增长最快的大多是从几乎为零起步的。
 
-TrustMRR's API terms forbid republishing its data and building public SEO pages from it. Use the leads for your own research; do not publish the list.
+TrustMRR 的 API 条款禁止转载它的数据，也禁止拿它做公开的 SEO 页面。这些线索只供你自己研究，不要公开这份清单。
 
-### ⑦ Asks: demand said out loud
+### ⑦ 求助：大家直接说出来的需求
 
-Once a week the radar searches Reddit for a dozen ways people ask for a tool ("is there an AI tool", "I wish there was a tool", "how do I automate", in `asks.patterns`), keeps the posts of the last week with a score of 2 or more, and has a small model sort them: a request, a complaint, a shared solution, or other. For requests and complaints an AI tool could answer, it writes the job the way a person would search it ("add b roll automatically", "convert slides to notes"). Jobs with at least 50 searches a month are listed with their posts and get the page-one check; each becomes a lead. Most asks are too specific to have searches yet: the first real week, 84 posts held 43 asks and only two had 50 searches a month ("best ai tool for research", from a 1,034-point r/PhD thread, and "best ai tool for coding"). So the best-scored of the others are listed too, as ideas rather than keywords. A month of posts read in a trial held a request for "an AI tool to convert PowerPoint lecture slides into notes", the same job a tool-site course uses as its worked example.
+雷达每周在 Reddit 上按十来种求工具的问法搜一次（"is there an AI tool"、"I wish there was a tool"、"how do I automate" 等，见 `asks.patterns`），留下最近一周、得分 2 以上的帖子，让一个小模型分类：求助、抱怨、分享的解法，或其他。对 AI 工具能解决的求助和抱怨，它把要做的事写成大家会搜的说法（"add b roll automatically"、"convert slides to notes"）。月搜索量 50 以上的列出来，附上帖子并做首页竞争检查，每件事记为一条线索。大多数求助太具体，还没有搜索量：第一次真实运行，一周 84 个帖子里有 43 个求助，只有两个月搜索量过 50（"best ai tool for research"，来自 r/PhD 一个 1,034 分的帖子；以及 "best ai tool for coding"）。所以其余得分最高的也会单独列出来，作为点子而不是关键词。试跑时读一个月的帖子，找到了「有没有 AI 工具能把 PPT 课件转成笔记」——正是一门工具站课程拿来做示范的那个需求。
 
-With `ai_answers` on (off by default; about $0.004 an answer), the jobs with searches are also put to ChatGPT, as the answer its own interface gives with search (DataForSEO's LLM scraper), and with `"engines": ["chatgpt", "google"]` to Google's AI Mode, as "What is the best tool to {job}?". A column says which tools the answers name; under the table come the sites they cite, and ✅ when one is yours. An answer that names no tool is a gap a new tool can fill in AI search; the cited sites are the pages AI search reads for the job: get listed there, or write the comparison against them. On 2026-10-20, for "convert powerpoint slides to notes", ChatGPT named Google NotebookLM, ChatGPT and Microsoft Copilot, and AI Mode listed Knowt, NoteGPT and Microsoft Copilot among others.
+打开 `ai_answers`（默认关；每个回答约 $0.004）后，有搜索量的需求还会拿去问 ChatGPT（用 DataForSEO 的 LLM 抓取，拿到的是 ChatGPT 自己界面带搜索时给的回答）；设成 `"engines": ["chatgpt", "google"]` 还会问 Google 的 AI Mode。问法是「What is the best tool to {job}?」。表里多一列写回答点名了哪些工具，表下面列出它们引用的站，引用了你的站会标 ✅。没点名任何工具 = AI 搜索里的空位，新工具可以去占；被引用的站 = AI 搜索读的就是这些页面：争取被它们收录，或者写和它们的对比页。2026-10-20 实测「convert powerpoint slides to notes」：ChatGPT 点名 Google NotebookLM、ChatGPT 和 Microsoft Copilot，AI Mode 列出 Knowt、NoteGPT、Microsoft Copilot 等。
 
-Posts are for your own research: quote them, do not republish them.
+帖子只供自己研究：可以引用，不要转载。
 
-### ⑧ Sellers: who just started taking money
+### ⑧ 新卖家：谁刚开始收钱
 
-A product's first payment link says more than its launch post: someone built a thing and asked for money for it. whoismaking.money used to rank sites by the traffic they sent to Stripe's checkout (clickstream data; its last real page in the Internet Archive is from September 2025, and by March 2026 the domain served a parked page with a hidden redirect). The same kind of data is on sale through AIsa's Similarweb at about $6 for 20 rows: too dear to cover the long tail. Payment links are a cheap stand-in. They are ordinary links on the seller's own page, so the public link graph shows them with the day each first appeared. Stripe has 143,000 linking sites and Polar 1,900 (every link a payment link); for Lemon Squeezy, Gumroad and Creem only store checkouts, `/l/` products and `/payment/` pages count, since their other links point at their own marketing sites and, for Gumroad, at profile pages spam networks use.
+一个产品挂出第一条收款链接，比发布帖更说明问题：有人做了东西，并开口要钱。whoismaking.money 曾经按「往 Stripe 结账页送了多少流量」给网站排名（点击流数据；互联网档案馆里它最后一个真实页面是 2025 年 9 月的，到 2026 年 3 月域名已是带隐藏跳转的停放页）。同类数据通过 AIsa 的 Similarweb 买得到，但每 20 行约 $6，覆盖不了长尾。收款链接是便宜的替代：它们是卖家自己页面上的普通链接，公开外链数据里查得到，还带每条首次出现的日期。Stripe 有 14.3 万个站链着它，Polar 1,900 个（每条都是收款链接）；Lemon Squeezy、Gumroad、Creem 只算店铺结账页、`/l/` 商品页和 `/payment/` 页，因为它们其余的链接指向自己的官网，Gumroad 还有大量被垃圾外链网络利用的个人主页。
 
-Once a week the radar reads, for each platform, the newest 100 payment links and the newest 100 sites to link to it for the first time (about $0.06 a platform), keeps the links of those new sites, and lists the sellers with their visits (GoAnyAPI) and their own home-page title and description, which also go to the keyword table as evidence. The first real run put janitorai.com, framer.com, pub.dev, Flathub and an n8n forum thread on top: user pages on big platforms that link to someone's payment link. So the linking page must be the site's own home, pricing or product page, not a post, thread or listing; the site must rank 350 or lower on DataForSEO's 0 to 1,000 scale; and above 300,000 visits a month it counts as a platform. A small model then sorts the new sellers by kind from their own words (keyword rules when it cannot), and AI and software come first, then templates, courses and the rest; within a kind the busiest first. On the first sorted run all twelve listed were software (a live-captions app for the Mac, a chat-with-PDF tool, an AI writing app for macOS, an MCP catalog, a Japanese audit SaaS among them), where traffic alone had put a Blender add-on site, a recipe blog and a design gallery first. A payment link means the site sells, not that it sells well, and checkouts made by code at payment time are not seen.
+雷达每周对每个平台读最新的 100 条收款链接，和最新的 100 个第一次链到这个平台的站（每个平台约 $0.06），只留这些新站的链接，列出它们的访问量（GoAnyAPI）和首页自己的标题、介绍，介绍同时交给新词表当依据。第一次真实运行，排在最前面的是 janitorai.com、framer.com、pub.dev、Flathub 和一个 n8n 论坛帖：都是大平台上的用户页，链着别人的收款链接。所以现在要求链接所在的页面是这个站自己的首页、价格页或产品页，不能是帖子、话题或列表页；站点在 DataForSEO 0 到 1,000 的评分里不超过 350；月访问超过 30 万的算平台。然后由一个小模型根据各站自己的介绍按类型分好（调用失败时用关键词规则），AI 和软件排最前，然后是模板、课程和其他；同一类里访问量大的在前。第一次按类型排序，列出的 12 个全是软件（其中有 Mac 实时字幕、和 PDF 对话的工具、macOS 上的 AI 写作 app、一个 MCP 目录、一个日本的内控审计 SaaS），而只按访问量排时，排在前面的是 Blender 插件站、食谱博客和设计图库。有收款链接只说明它在卖，不说明卖得好；付款时才由代码生成的结账页看不到。
 
-A new link is not a new seller. A first version took the newest links for new sellers; on 2026-10-14 we checked them against the day each site first linked to the platform. A site that has sold for years puts the same link on every new page it makes (one carries its Stripe link on each of its well-permit pages), and two thirds of the 2,000 newest Stripe links came from such sites: of the 60 Stripe sellers that day's list showed, 17 had just started. So a seller is new by the day its site first linked to the platform (DataForSEO's referring domains), and the report says how many links came from sites that sold already.
+新链接不等于新卖家。最初的版本把最新的链接当成新卖家；2026-10-14 我们按「这个站第一次链到这个平台的日期」核对了一遍：卖了好几年的站，每做一个新页面都会挂上同一条链接（有个站在它的每个水井许可证页面上都挂着同一条 Stripe 链接），最新的 2,000 条 Stripe 链接里有三分之二来自这样的站；当天名单上的 60 个 Stripe 卖家，只有 17 个是真的刚开始。所以现在按这个站第一次链到平台的日期判断新卖家（DataForSEO 的 referring domains），报告里也会写出有多少条链接来自老卖家。
 
-### History: every seller back to 2019
+### 历史：2019 年以来的全部卖家
 
 ```bash
-python -m radar history pull            # every site linking to the five platforms today: about $18
-python -m radar history read            # their home-page titles and descriptions, free
-python -m radar history sort            # their kind, by a small model: about $0.005 for 60 sites (--rules: keywords alone, free)
-python -m radar history update          # weekly: the sellers that appeared since the newest day, about $0.5
+python -m radar history pull            # 今天还链着这五个平台的所有站：约 $18
+python -m radar history read            # 读它们首页的标题和介绍，免费
+python -m radar history sort            # 小模型按类型分：每 60 个站约 $0.005（--rules：只按关键词规则，免费）
+python -m radar history update          # 每周一次：补上最新一天之后出现的卖家，约 $0.5
 python -m radar history --out sellers.csv
 ```
 
-`history pull` reads every site that links to each platform today, one row per site with the day it first linked: DataForSEO's one-per-domain backlinks, oldest first, 1,000 a call ($0.06). On 2026-10-14 that day matched the referring-domain first-link day for all 1,704 Polar sites both lists name alike. It stops at `--max-usd` (default 20) and resumes where it stopped. `history` alone counts sellers per month, platform and kind; `--out` writes them all to a CSV. The rows are DataForSEO's: for research, not to republish.
+`history pull` 读今天链着每个平台的所有站，每个站一行，带它第一次挂链接的日期：用 DataForSEO 每个域名取一条的外链，从最早的排起，每次 1,000 条（$0.06）。2026-10-14 核对过：两份名单写法相同的 1,704 个 Polar 站，这个日期和 referring domains 记录的首次日期全部一致。花到 `--max-usd`（默认 20）就停，下次从停下的地方接着拉。只跑 `history` 会按月份、平台、类型统计卖家数；加 `--out` 把全部卖家写进 CSV。这些数据来自 DataForSEO：只用于研究，不要转载发布。
 
-How far back it goes, from the link graph's monthly count of sites linking for the first time (2026-10-14; one call per platform, $0.03):
+能追溯多久，看外链数据里每月第一次链到平台的站数（2026-10-14；每个平台一次调用，$0.03）：
 
-| Platform | Counted from | Sites since 2019 | New sites a month, May to September 2026 | Linking today |
+| 平台 | 从何时有量 | 2019 年以来累计 | 2026 年 5 到 9 月每月新站 | 今天还链着 |
 |---|---|---|---|---|
-| Stripe | June 2021 (a few dozen a month before) | 306,000 | 6,500 to 8,200 (14,200 in June) | 143,000 |
-| Gumroad | 2019 | 530,000 | 4,200 to 5,700, while 6,400 to 9,400 drop their links | 140,000 |
-| Lemon Squeezy | 2023 | 34,000 | 600 to 1,100 | 18,000 |
-| Polar | 2024 | 2,285 | 109 to 268 | 1,943 |
-| Creem | 2025 | 1,708 | 74 to 268 | 1,449 |
+| Stripe | 2021 年 6 月（之前每月几十个以内） | 30.6 万 | 6,500 到 8,200（6 月 1.42 万） | 14.3 万 |
+| Gumroad | 2019 年 | 53 万 | 4,200 到 5,700，同时每月有 6,400 到 9,400 个站撤掉链接 | 14.0 万 |
+| Lemon Squeezy | 2023 年 | 3.4 万 | 600 到 1,100 | 1.8 万 |
+| Polar | 2024 年 | 2,285 | 109 到 268 | 1,943 |
+| Creem | 2025 年 | 1,708 | 74 到 268 | 1,449 |
 
-Two cautions. In October 2023 Stripe's count jumped from 3,216 to 16,206, and new links from 1.2 million to 20 million the month after: the crawler grew, not the sellers. And a pull holds only sites that still link, so the older the month, the more of its sellers are missing. For Gumroad, Lemon Squeezy and Creem the monthly counts also include links to their own sites and to profiles; the pull keeps those apart (only payment links count as sellers).
+看这张表要注意两点。2023 年 10 月 Stripe 从 3,216 跳到 16,206，下个月新外链从 120 万涨到 2,000 万：是爬虫扩大了，不是卖家暴增。另外拉下来的只有今天还链着的站，月份越早，缺的卖家越多。Gumroad、Lemon Squeezy、Creem 的月度数字还包括指向它们官网和个人主页的链接；拉取时会分开（只有收款链接算卖家）。
 
-### ⑧b, ⑨, ⑩ and the evidence beside the names
+### ⑧b、⑨、⑩ 和新名字的旁证
 
-- **⑧b Builders** (weekly, with ⑧): the badge an AI app builder puts on what it made ("Edit with Lovable", "Built with v0") and the "Powered by beehiiv" link of a new newsletter, read from the same link graph. Most of what people build with an app builder is a business's website (a pizzeria, a lawn service); only the software among them becomes a lead, the rest says what the builder is used for.
-- **⑨ Just listed** (daily; the paid lists weekly): each list's new entries since the radar last read it (a first run only takes the snapshot, and lists what the source itself dates as recent). The sites behind Figma, There's An AI For That and the Chrome Web Store are not read: Google's index of their new pages is.
-- **⑩ Money** (weekly, GoAnyAPI): a site that earns from ads names its AdSense ID in its ads.txt, and the same ID on other domains is its owner's other sites, each a niche someone already makes money in. The sites asked about are the tool sites on page one for the day's terms and the paying products of ⑥ and ⑧. An advertiser new on one of your `ad_terms` has just decided the term is worth money.
-- **Beside the names**: people register sites on a name before search engines list them, so the newest domains carrying a name (whois for the first two names, HTTPS certificates for the rest), its Wikipedia views against the week before, Google's own type for it ("AI agent" means Google knows the thing; a name Google knows only as something else is taken) and Discord servers about it. For a paying product, the searches for its alternatives, comparisons and price are a market someone already proved.
+- **⑧b 新作品**（每周，跟 ⑧ 一起）：AI 建站工具挂在作品上的徽章（「Edit with Lovable」「Built with v0」）和新 newsletter 的「Powered by beehiiv」链接，从同一份外链数据里读。用建站工具做的大多是小商家的网站（披萨店、草坪养护）；只有其中的软件进线索，其余的只说明这个工具被拿来做什么。
+- **⑨ 新上架**（每天；付费的每周）：每份列表里雷达上次读过之后新出现的条目（第一次运行只建快照，并列出来源自己标明是近期的条目）。Figma、There's An AI For That、Chrome 应用商店本身不去读，读的是 Google 对它们新页面的收录。
+- **⑩ 付费信号**（每周，GoAnyAPI）：靠广告赚钱的站会在 ads.txt 里写出自己的 AdSense ID，同一个 ID 出现在别的域名上，就是同一个站长的其他站，每个都是有人已经赚到钱的细分赛道。查的是当天值得做的词首页上的工具站，以及 ⑥、⑧ 里的付费产品。你在 `ad_terms` 里关注的词上出现了新广告主，说明有人刚认定这个词值得花钱。
+- **新名字的旁证**：大家会在搜索引擎收录之前就注册带新名字的站，所以看带这个名字的最新域名（前两个名字用 whois，其余看新签发的 HTTPS 证书）、维基百科本周和上周的浏览量、Google 自己给它的类型（「AI agent」说明 Google 已经认识它；Google 只认得别的东西，就是撞名了）和相关的 Discord 服务器。付费产品的「替代品、对比、价格」这些搜索，是有人已经验证过的市场。
 
-### ⚡ What tutorial viewers ask for
+### ⚡ 教程观众在要什么
 
-For up to three leads a day marked ⚡ (a widely shared walkthrough of a manual workflow), the radar finds the top tutorial videos for the lead (GoAnyAPI), reads their comments (AIsa, $0.001 a page) and has the model pull out what viewers ask for: the steps they find too hard, the "can this be done in one click". That list is the one-click tool. It needs a GoAnyAPI key to find the videos.
+对每天最多 3 条带 ⚡ 的线索（一条被大量转发的手动流程教程），雷达找出它的热门教程视频（GoAnyAPI），读视频下的评论（AIsa，每页 $0.001），让模型挑出观众在要什么：哪一步太难、「能不能一键搞定」。这张清单就是那个一键工具。找视频需要 GoAnyAPI key。
 
-## Pain points: `python -m radar pains "ai headshot"`
+## 痛点：`python -m radar pains "ai headshot"`
 
-What people complain about for a kind of tool, grouped into the gaps a new tool can fill:
+把大家对一类工具的抱怨，归纳成新工具能填的缺口：
 
-- low-star Chrome Web Store reviews (1 to 3 stars) of the extensions Google shows for the keyword, or of the ones you name with `--extension ID` (GoAnyAPI: 2 credits to find them, 3 a page of reviews);
-- Reddit posts that complain about the job or its tools ("{keyword} alternative", "{keyword} frustrating", ...; AIsa);
-- comments under the top tutorial videos for the keyword (AIsa).
+- Google 上这个词对应的 Chrome 扩展的低星评论（1 到 3 星），或你用 `--extension ID` 指定的扩展（GoAnyAPI：找扩展 2 credits，每页评论 3 credits）；
+- Reddit 上抱怨这件事或相关工具的帖子（"{关键词} alternative"、"{关键词} frustrating" 等；AIsa）；
+- 这个词的热门教程视频下的评论（AIsa）。
 
-A model groups them into gaps (missing, too hard, quality, price, wants a tool), each with a count, an example and the phrase someone with that problem would search. About $0.05 a keyword. Counts are of what was read, not of the market.
+模型把它们归成缺口（缺功能、太难、质量、价格、想要工具），每个缺口给出次数、例子和有这个问题的人会搜的说法。每个词约 $0.05。次数是读到的条目数，不代表市场规模。
 
-What it cannot read: App Store, Google Play and Trustpilot reviews (DataForSEO serves them as tasks to post and fetch later, and AIsa runs synchronous calls only); There's An AI For That's request board (a Cloudflare challenge in front of every page; getting past it would be getting past their bot protection, so the radar does not); Facebook groups (Meta closed the Groups API in April 2024, and its research library is open to approved academic and nonprofit researchers only).
+读不到的：App Store、Google Play、Trustpilot 的评论（DataForSEO 是「先提交、后取结果」的任务接口，AIsa 只支持同步调用）；There's An AI For That 的求助板（每个页面前都有 Cloudflare 挑战，硬闯就是绕过对方的反爬，雷达不做）；Facebook 小组（Meta 2024 年 4 月关闭了 Groups API，它的研究数据库只对获批的学术和非营利研究者开放）。
 
-## One key, and an optional second
+## 一个必需的 key，一个可选的
 
-Everything the radar needs goes through [AIsa](https://go.aisa.one/yansen-zhu): X posts, DataForSEO Trends (DataForSEO's estimate of Google search interest, not Google Trends itself) and domain data, and the models that judge names and propose phrases. One key, pay per call, no subscriptions to X's API or DataForSEO.
+所有付费的部分都走 [AIsa](https://go.aisa.one/yansen-zhu)：X 帖子、DataForSEO Trends（DataForSEO 对 Google 搜索热度的估算，不是 Google Trends 本身）和域名数据、判断名字的模型。一个 key，按次付费，不用分别订阅 X API 和 DataForSEO。
 
-> That link is a referral link: signing up through it supports this project. The radar works the same with a key from anywhere on aisa.one.
+> 上面是推荐链接：通过它注册是对这个项目的支持。从 aisa.one 任何入口拿到的 key 用起来完全一样。
 
-**Optional: `GOANYAPI_API_KEY`** ([goanyapi.com](https://goanyapi.com/r/ga-95708898fb)) improves the keyword table in two ways, for about $0.07 a day: it adds Google Trends' related queries for each name, and it reads the curve of the names and the bigger generic terms (1,000 searches a month or more, eight rows at most) from 30 days of daily data for one country, settled to yesterday. Those rows show the country after "Now", as in `still rising (US)`. Without the key the table is built from the model's phrases and the worldwide series alone. The service is young (first released in August 2026); in our tests calls took 20 to 55 seconds and about one in ten failed, so the radar tries twice, reports a failure in the table and carries on. That link is a referral link too.
+**可选：`GOANYAPI_API_KEY`**（[goanyapi.com](https://goanyapi.com/r/ga-95708898fb)）从两方面改进新词表，每天约 $0.07：给每个名字加上 Google Trends 的相关查询；名字和规模较大的通用词（月搜 1,000 以上，最多 8 行）的走势，改用单个国家的 30 天日数据来读，这份数据结算到昨天。这些行的「现在」一列后面会标出国家，例如 `还在涨 (US)`。不配这个 key，新词表只用模型提出的写法和全球数据。这个服务很新（2026 年 8 月才发布）；我们测试时每次调用要 20 到 55 秒，大约十次有一次失败，所以雷达会试两次，失败就写在表里，继续往下跑。上面这个也是推荐链接。
 
-Without an AIsa key the free signals still run (Hugging Face, GitHub, sitemaps, Search Console); the report then lists every term unsorted, because nothing judges which are names.
+没有 AIsa 的 key 时，免费的信号照常运行（Hugging Face、GitHub、sitemap、Search Console），只是报告里所有词不分先后列出，因为没有模型判断哪些是名字。
 
-## Quick start
+## 快速开始
 
-[uv](https://docs.astral.sh/uv/)'s `uvx` runs the radar straight from PyPI, with nothing to clone or install:
+用 [uv](https://docs.astral.sh/uv/) 的 `uvx` 可以直接从 PyPI 运行雷达，不用克隆，也不用安装：
 
 ```bash
-export AISA_API_KEY=...                       # from https://go.aisa.one/yansen-zhu; or `aisa login` with the AIsa CLI
-uvx new-term-radar daily --out report.md      # today's new names and the keyword table behind them
-uvx new-term-radar keywords "photocraft"      # the keyword table for names you already have
+export AISA_API_KEY=...                       # 从 https://go.aisa.one/yansen-zhu 获取；用 AIsa 命令行 `aisa login` 登录过也可以
+uvx new-term-radar daily --out report.md      # 今天的新名字，和它们背后的关键词表
+uvx new-term-radar keywords "photocraft"      # 你手上已有的名字的关键词表
 ```
 
-With no `config.json` in the folder, `daily` watches the example X accounts and sitemaps that ship with the radar and keeps its snapshots in `./state`; copy [config.example.json](config.example.json) to `config.json` there and edit it to watch your own. `uvx new-term-radar@latest …` picks up a new release; `pip install new-term-radar` (or `uv tool install new-term-radar`) keeps a `new-term-radar` command installed. Python 3.10 or newer; the radar uses only the standard library.
+当前目录没有 `config.json` 时，`daily` 用雷达自带的示例 X 账号和 sitemap，快照存在 `./state`；把 [config.example.json](config.example.json) 复制成 `config.json` 再编辑，就换成你自己的清单（想要中文报告把 lang 改成 "zh"）。`uvx new-term-radar@latest …` 会拿到新版本；想一直装着就 `pip install new-term-radar`（或 `uv tool install new-term-radar`），之后直接用 `new-term-radar` 命令。需要 Python 3.10 或更高版本，雷达本身只用标准库。
 
-From a clone it is the same program, with the same key:
+从克隆的仓库里运行是同一个程序，用同一个 key：
 
 ```bash
 git clone https://github.com/zhuyansen/new-term-radar
 cd new-term-radar
-cp config.example.json config.json      # then edit: your X accounts, sitemaps, topics
+cp config.example.json config.json      # 然后编辑：你的 X 账号、sitemap、主题；想要中文报告把 lang 改成 "zh"
 python -m radar daily --out report.md
 ```
 
-The first run builds its snapshots: yesterday's X vocabulary, star counts and sitemap URLs do not exist yet, so only GitHub breakouts (which need no yesterday) are reported. From the second run on, every signal reports what changed.
+第一次运行只是建立快照：昨天的 X 词表、星数、sitemap 网址都还没有，所以只会报出 GitHub 爆发仓库（它不依赖昨天的数据）。从第二次运行起，每个信号都会报告变化。
 
-Two commands (without a clone, `uvx new-term-radar` in place of `python -m radar`):
+两个命令（不克隆的话，把 `python -m radar` 换成 `uvx new-term-radar`）：
 
 ```bash
-python -m radar sources --out sources.md           # ① only: X and Hugging Face. Run every few hours.
-python -m radar daily --skip x,hf --out report.md  # everything else, once a day
+python -m radar sources --out sources.md           # 只跑 ①：X 和 Hugging Face，每隔几小时跑一次
+python -m radar daily --skip x,hf --out report.md  # 其余全部，每天一次
 ```
 
-`sources` writes a report only when there is a new name. `daily` with `--skip x,hf` lists what `sources` kept in the last 24 hours. If you run only once a day, use `python -m radar daily` and skip nothing.
+`sources` 只在有新名字时才写报告。`daily` 带 `--skip x,hf` 时，会列出 `sources` 在过去 24 小时记下的线索。如果你每天只跑一次，直接用 `python -m radar daily`，什么都不跳过。
 
-Other flags: `--skip` takes any of `x,hf,breakout,sitemaps,newsites,gsc,review,judge,usecases`; `--new-sites` runs the weekly signal today; `--mail` sends the report (below); `--state DIR` moves the database and snapshots.
+其他参数：`--skip` 可选 `x,hf,breakout,sitemaps,newsites,gsc,review,judge,usecases`；`--new-sites` 让每周信号今天就跑；`--mail` 发邮件（见下）；`--state DIR` 指定数据库和快照的目录。
 
-## What a report looks like
+## 报告长什么样
 
-From a real run on 2026-10-12 (shortened):
+2026-10-12 一次真实运行的节选（中文报告，`"lang": "zh"`）：
 
 ```
-### Candidate new terms (names first; terms you already cover are marked)
+### 候选新词(判为专有名词的排前面;已覆盖的会标出)
 
-| Term | Signals | Name score | Known | Search variants | Examples |
-| **gridcraft** | GitHub breakout storytold/gridcraft ★3178 (626/day) | 0.95 | none | storytold gridcraft | GridCraft: an open-source, cl… |
-| **artex** | GitHub breakout mhtsec/ARTEX ★3353 (825/day) | 0.85 | none | mhtsec artex, mht artex | AI 自主渗透测试系统 … |
+| 词 | 信号 | 名字得分 | 已覆盖 | 搜索变体 | 例子 |
+| **gridcraft** | GitHub 爆发 storytold/gridcraft ★3178(均 626/天) | 0.95 | 无 | storytold gridcraft | GridCraft: an open-source, cl… |
+| **artex** | GitHub 爆发 mhtsec/ARTEX ★3353(均 825/天) | 0.85 | 无 | mhtsec artex, mht artex | AI 自主渗透测试系统 … |
 
-Other rising terms (judged common words): anatomy, math, iphone use
+其他上升词(判为普通词):anatomy, math, iphone use
 
-### ⑤ Review (terms reported 14 days ago: did they rise in DataForSEO Trends?)
+### ⑤ 复盘(14 天前报出的词,在 DataForSEO Trends 里起没起来)
 
-| Term | First reported | Verdict | Days ahead |
+| 词 | 首次报出 | 结论 | 提前天数 |
 | strata | 2026-09-25 | hit | 3 |
 ```
 
-and from `sources`:
-
-```
-| **qwen image 2.1** | Hugging Face: new at #4, 2 versions | 1.00 | none | Qwen/Qwen-Image-2.1-Turbo (text-to-image, ♥569) |
-| **ltx 2.5** | Hugging Face: new at #6 | 0.90 | none | Lightricks/LTX-2.5 (image-to-video, ♥7347) |
-```
-
-`daily` also writes `report.json` beside the Markdown, with everything the report was built from.
+`daily` 还会在 Markdown 旁边写一份 `report.json`，包含生成报告用到的全部数据。
 
 ## config.json
 
-| Key | What it is |
+| 字段 | 含义 |
 |---|---|
-| `lang` | `"en"` or `"zh"`: the language of the report |
-| `x_accounts` | `labs` and `bloggers`: X handles to read. Labs say names first; pick the bloggers your field's new terms spread through |
-| `sitemaps` | Sites whose new pages you want to see. `index` is a sitemap, or a sitemap index when `shards` (a regex) picks which sub-sitemaps to read. `pause` is the seconds between requests to that site. `strip_locale` drops `/en/`, `/zh-CN/` prefixes so one entry in many languages counts once |
-| `topics` | Name and regex: each topic gets its own section listing the leads, repos and queries that match |
-| `known_terms` | Terms you already have a page for, or never want reported. A lead that contains one, or is contained in one, is marked and not kept for review |
-| `stop_words` | Everyday words of your field, added to the built-in list (which is tuned for AI tooling) |
-| `judge` | `model` (any chat model on AIsa) and `min_score` (0.5) |
-| `breakout` | `window_days`, `min_stars`, `velocity_min` (stars a day), `delta_min` (stars since yesterday) |
-| `new_sites` | `queries`: a name and a SQL LIKE pattern on the domain (`"%ai%"`), one paid query each; `weekday` (0 = Monday) |
-| `review` | `after_days` (14) and `per_day` (5 leads a day) |
-| `usecases` | The keyword table. `per_day` (names read a day, 0 = off), `model`, `benchmark` (the keyword sizes are compared with), `min_volume` (monthly searches a phrase needs), `min_daily` (searches a day for "prioritize"), `recheck_days` (3), `related` (use related queries when `GOANYAPI_API_KEY` is set), `related_geo` (`US`), `country_trends` (read the bigger rows' curves from that country), `country_min_volume` (1000) and `country_max` (8) |
-| `word_age` | `enabled`, `time_range` (`past_5_years`, the longest the Trends source offers), `new_days` (180: first searched within this many days = 🆕, read one step easier on page one) |
-| `markets` | `enabled`, `codes` (`["US", "DE", "FR", "JP"]`; built in: US, GB, CA, AU, IN, DE, FR, ES, IT, NL, BR, JP, KR), `difficulty` (per-market keyword difficulty), `top_region` (the Trends top country), `locations` (more markets: `{"MX": [2484, "es"]}`, a Google Ads location code and a language) |
-| `serp_shape` | `enabled`, `location_code` (2840), `language_code` (`en`), `device` (`desktop`), `platforms` (domains that count as high-authority platforms; `*.github.io` means its subdomains) |
-| `yours` | `enabled`, `domains` (your sites; empty = the Search Console property's domain), `days` (28: the Search Console window) |
-| `year_curve` | `enabled`: the twelve-month column, from the volume call (free) |
-| `dot_com` | `enabled`, `max_rows` (8: prioritized rows checked a run, names first) |
-| `ai_answers` | `enabled` (`false`: it costs about $0.004 an answer), `engines` (`["chatgpt"]`; add `"google"` for AI Mode), `max_rows` (6), `prompt` (`"What is the best tool to {job}?"`), `location_code` (2840), `language_code` (`en`) |
-| `gsc` | `site` (`sc-domain:example.com`) and `token_file`. Leave `{}` to turn the signal off; with it set, `yours` also reads your average position per keyword |
+| `lang` | `"en"` 或 `"zh"`：报告的语言 |
+| `x_accounts` | `labs` 和 `bloggers`：要读的 X 账号。实验室最先说出名字；博主选你这个领域里新词靠谁传开 |
+| `sitemaps` | 想看哪些站新增了什么页面。`index` 是一个 sitemap；如果它是 sitemap 索引，用 `shards`（正则）挑要读的子 sitemap。`pause` 是对这个站两次请求之间的秒数。`strip_locale` 去掉 `/en/`、`/zh-CN/` 这类前缀，同一条目的多语言版本只算一次 |
+| `topics` | 名称和正则：每个主题单独一节，列出匹配的线索、仓库和查询 |
+| `known_terms` | 你已经有页面的词，或者永远不想看到的词。包含它或被它包含的线索会被标出，不进入复盘 |
+| `stop_words` | 你这个领域的日常用词，追加到内置列表（内置列表是按 AI 工具领域调的） |
+| `judge` | `model`（AIsa 上任意对话模型）和 `min_score`（默认 0.5） |
+| `breakout` | `window_days`、`min_stars`、`velocity_min`（每天涨星）、`delta_min`（比昨天多的星） |
+| `new_sites` | `queries`：名称和域名的 SQL LIKE 模式（`"%ai%"`），每个是一次付费查询；`weekday`（0 = 周一） |
+| `review` | `after_days`（14）和 `per_day`（每天复盘 5 条） |
+| `usecases` | 新词表。`per_day`（每天读几个名字，0 = 关闭）、`model`、`benchmark`（用来比规模的基准词）、`min_volume`（写法至少要有的月搜索量）、`min_daily`（判为「优先」所需的日搜）、`recheck_days`（3）、`related`（设了 `GOANYAPI_API_KEY` 时是否用相关查询）、`related_geo`（`US`）、`country_trends`（规模较大的行改读该国数据）、`country_min_volume`（1000）、`country_max`（8） |
+| `word_age` | `enabled`、`time_range`（`past_5_years`，Trends 数据源能给的最长区间）、`new_days`（180：首次有搜索在这么多天内 = 🆕，首页竞争放宽一档） |
+| `markets` | `enabled`、`codes`（`["US", "DE", "FR", "JP"]`；内置：US、GB、CA、AU、IN、DE、FR、ES、IT、NL、BR、JP、KR）、`difficulty`（各市场的关键词难度）、`top_region`（Trends 热度最高的国家）、`locations`（更多市场：`{"MX": [2484, "es"]}`，Google Ads 地区代码加语言） |
+| `serp_shape` | `enabled`、`location_code`（2840）、`language_code`（`en`）、`device`（`desktop`）、`platforms`（算作高权重平台的域名；`*.github.io` 指它的子域名） |
+| `yours` | `enabled`、`domains`（你的站；不填 = Search Console 资源的域名）、`days`（28：Search Console 的时间窗） |
+| `year_curve` | `enabled`：「近 12 个月」那一列，数据来自搜索量查询（免费） |
+| `dot_com` | `enabled`、`max_rows`（8：每次查几个优先行，名字优先） |
+| `ai_answers` | `enabled`（`false`：每个回答约 $0.004）、`engines`（`["chatgpt"]`；加 `"google"` 即同时问 AI Mode）、`max_rows`（6）、`prompt`（`"What is the best tool to {job}?"`）、`location_code`（2840）、`language_code`（`en`） |
+| `gsc` | `site`（`sc-domain:example.com`）和 `token_file`。留 `{}` 即关闭；配了之后 `yours` 也会读你在每个词上的平均排名 |
 
-Please read each site's robots.txt before you add its sitemap, and keep `pause` at or above its crawl-delay. The example config makes a few dozen requests a day in total, spaced by `pause`.
+添加某个站的 sitemap 之前，请先看它的 robots.txt，`pause` 不要低于它的 crawl-delay。示例配置每天总共几十次请求，按 `pause` 间隔发出。
 
-### Search Console (optional)
+### Search Console（可选）
 
 ```bash
 pip install google-auth-oauthlib
-python scripts/gsc_auth.py gsc_client.json   # opens a browser once, writes gsc_token.json
+python scripts/gsc_auth.py gsc_client.json   # 打开一次浏览器授权，写出 gsc_token.json
 ```
 
-`gsc_client.json` is an OAuth client of type "Desktop app" from Google Cloud Console, in a project with the Search Console API enabled. Then set `"gsc": {"site": "sc-domain:your-site.com"}`. The token is read-only and stays on your machine; `.gitignore` already lists it.
+`gsc_client.json` 是 Google Cloud Console 里类型为「桌面应用」的 OAuth 客户端，所在项目要启用 Search Console API。然后设置 `"gsc": {"site": "sc-domain:你的域名"}`。授权是只读的，凭证只留在你自己的机器上，`.gitignore` 已经把它排除了。
 
-### Mail (optional)
+### 邮件（可选）
 
-`--mail` sends the report through [Resend](https://resend.com). Set `RESEND_API_KEY`, `EMAIL_FROM` (an address on a domain you verified there) and `RADAR_EMAIL_TO` (comma-separated). `pip install markdown` for the HTML version.
+`--mail` 通过 [Resend](https://resend.com) 发送报告。设置 `RESEND_API_KEY`、`EMAIL_FROM`（你在 Resend 验证过的域名下的地址）和 `RADAR_EMAIL_TO`（多个用逗号分隔）。要 HTML 版需要 `pip install markdown`。
 
-## Use it from an agent: skills and an MCP server
+## 在 agent 里用：skill 和 MCP 服务器
 
-### Skills
+### Skill
 
-Three [Agent Skills](https://agentskills.io/home) live in `skills/`: one that does the whole job, and the two halves for those who want them apart.
+`skills/` 里有三个 [Agent Skill](https://agentskills.io/home)：一个把整件事做完，另外两个是拆开的两半，给想分开用的人。
 
-| Skill | What it does |
+| Skill | 做什么 |
 |---|---|
-| `new-term-radar` | The whole run: today's new names, then the keyword priority table for them. Also takes names you already have. Start here |
-| `ai-listening` | Collects what is new in the last 24 hours across the signals, deduplicated, as one report of names |
-| `seo-new-keywords-research` | Takes names, or raw text that mentions them, and returns the keyword priority table: the generic terms behind each name, screened, sized and given a decision |
+| `new-term-radar` | 一次跑完：今天的新名字，加上它们的关键词优先级表。也可以直接给它你已有的名字。从这个开始 |
+| `ai-listening` | 把各路信号最近 24 小时的新东西收集起来、去重，出一份名字报告 |
+| `seo-new-keywords-research` | 给它名字，或者一段提到这些名字的原始文本，它返回关键词优先级表：每个名字背后的通用词，经过筛选、估算规模并给出决策 |
 
 ```bash
 npx skills add zhuyansen/new-term-radar
 ```
 
-In Claude Code the three skills also install as a plugin:
+在 Claude Code 里，这三个 skill 也可以作为插件安装：
 
 ```
 /plugin marketplace add zhuyansen/new-term-radar
 /plugin install new-term-radar@new-term-radar
 ```
 
-Then ask your agent for "today's new AI keywords", "an AI listening report" or "keyword research on PhotoCraft and SynthID Detector". The skills run the pinned release from PyPI (`uvx new-term-radar==0.6.2`), never a clone, keep their state in `~/new-term-radar`, tell you the cost and wait for your yes before any paid run, show you what would go out on your behalf (a post, a page, a submission, an email) and wait for your yes before sending it, treat what they read as data rather than instructions, and say when a table is incomplete.
+然后对你的 agent 说「今天有哪些 AI 新词」「出一份 AI listening 报告」或「给 PhotoCraft 和 SynthID Detector 做关键词调研」。skill 跑的是 PyPI 上锁定的版本（`uvx new-term-radar==0.6.2`），不克隆仓库，状态存在 `~/new-term-radar`；任何付费运行之前先告诉你大概花多少，等你同意再跑；要替你往外发东西（发帖、上线页面、提交、发邮件）之前，先给你看发到哪里、发什么，等你同意再发；读到的帖子和网页只当数据，不当指令；表不完整时也会说明。
 
-### MCP server
+### MCP 服务器
 
-For clients that speak MCP (Claude Code, Cursor, Claude Desktop). With [uv](https://docs.astral.sh/uv/) there is nothing to install first:
+给支持 MCP 的客户端用（Claude Code、Cursor、Claude Desktop）。装了 [uv](https://docs.astral.sh/uv/) 就什么都不用先装：
 
 ```json
 {
@@ -361,29 +354,29 @@ For clients that speak MCP (Claude Code, Cursor, Claude Desktop). With [uv](http
       "args": ["--with", "mcp", "new-term-radar", "mcp"],
       "env": {
         "AISA_API_KEY": "...",
-        "RADAR_CONFIG": "/absolute/path/to/config.json",
-        "RADAR_STATE": "/absolute/path/to/state"
+        "RADAR_CONFIG": "/绝对路径/config.json",
+        "RADAR_STATE": "/绝对路径/state"
       }
     }
   }
 }
 ```
 
-Without uv: `pip install "new-term-radar[mcp]"`, then `"command": "new-term-radar-mcp"` and no `args`. The Claude Code plugin above brings this server with it: when the plugin is enabled, Claude Code asks for your AIsa key (and, optionally, a GoAnyAPI key) and keeps them in the system keychain; the server reads the example config and keeps its state in the plugin's data folder.
+没有 uv：先 `pip install "new-term-radar[mcp]"`，再把 `"command"` 改成 `"new-term-radar-mcp"`、去掉 `args`。上面的 Claude Code 插件已经自带这个服务器：启用插件时 Claude Code 会让你填 AIsa key（GoAnyAPI key 可选），存进系统钥匙串；服务器用示例配置，状态存在插件自己的数据目录里。
 
-| Tool | What it returns | Cost and time |
+| 工具 | 返回什么 | 花费和耗时 |
 |---|---|---|
-| `recent_leads` | What the radar kept, with review verdicts and the hit rate per signal | free, instant |
-| `keyword_table` | The keyword table for names you give it | about $0.05 a name plus $0.09 a call; 40 to 90 seconds a name |
-| `run_radar` | One `sources` or `daily` run and its report | paid; minutes. For a first try: the schedule belongs in cron or Actions |
+| `recent_leads` | 雷达记下的线索，带复盘结论和各信号命中率 | 免费，立刻返回 |
+| `keyword_table` | 你给的名字的新词表 | 每个名字约 $0.05，每次调用另加 $0.09；每个名字 40 到 90 秒 |
+| `run_radar` | 跑一次 `sources` 或 `daily`，返回报告 | 付费，要几分钟。只适合第一次试用，定时运行应该交给 cron 或 Actions |
 
-Point `RADAR_STATE` at the directory your scheduled runs write to and `recent_leads` shows their leads. The same two commands exist on the command line: `python -m radar keywords "name" …` and `python -m radar leads`.
+把 `RADAR_STATE` 指向定时任务写入的那个目录，`recent_leads` 看到的就是定时任务记下的线索。同样的两个功能在命令行里也有：`python -m radar keywords "名字" …` 和 `python -m radar leads`。
 
-### Codex, TRAE, WorkBuddy and DeepSeek Harness
+### Codex、TRAE、WorkBuddy 和 DeepSeek Harness
 
-The same skills and server work in these agents too. Each starts the server with uvx, so [uv](https://docs.astral.sh/uv/) has to be installed.
+同样的 skill 和服务器在这几个 agent 里也能用。它们都用 uvx 启动服务器，所以本机要先装 [uv](https://docs.astral.sh/uv/)。
 
-**Codex.** The skills: `npx skills add zhuyansen/new-term-radar -a codex` (add `-g` for every project). The server goes in `~/.codex/config.toml`, which the CLI, the IDE extension and the app share:
+**Codex。** skill：`npx skills add zhuyansen/new-term-radar -a codex`（加 `-g` 装给所有项目）。服务器写进 `~/.codex/config.toml`，命令行、IDE 插件和桌面 app 共用这一份：
 
 ```toml
 [mcp_servers.new-term-radar]
@@ -394,20 +387,20 @@ tool_timeout_sec = 900
 
 [mcp_servers.new-term-radar.env]
 AISA_API_KEY = "..."
-RADAR_STATE = "/absolute/path/to/state"
+RADAR_STATE = "/绝对路径/state"
 ```
 
-Codex gives a server 10 seconds to start and a tool 60 seconds to answer. The first start downloads the package, `keyword_table` takes 40 to 90 seconds a name and a `daily` run 5 to 15 minutes, so raise both as above. `codex mcp add new-term-radar --env AISA_API_KEY=... --env RADAR_STATE=/absolute/path/to/state -- uvx --with mcp new-term-radar mcp` writes the same entry without the two timeouts.
+Codex 默认只给服务器 10 秒启动、每次工具调用 60 秒。第一次启动要下载包，`keyword_table` 每个名字要 40 到 90 秒，`daily` 一次要 5 到 15 分钟，所以两个都要像上面这样调大。`codex mcp add new-term-radar --env AISA_API_KEY=... --env RADAR_STATE=/绝对路径/state -- uvx --with mcp new-term-radar mcp` 也能写入同样的配置，只是不带这两个超时。
 
-**TRAE.** The skills: `npx skills add zhuyansen/new-term-radar -a trae` (TRAE CN: `-a trae-cn`). The server: Settings → MCP → Add → Add manually, and paste the JSON above. In TRAE CN you can instead paste this link into the browser's address bar; TRAE opens the server's configuration, where you fill in your AIsa key and an absolute path for `RADAR_STATE`, and confirm:
+**TRAE。** skill：`npx skills add zhuyansen/new-term-radar -a trae-cn`（国际版用 `-a trae`）。服务器：设置 → MCP → 添加 → 手动添加，粘贴上面的 JSON。TRAE CN 也可以把下面这个链接粘贴到浏览器地址栏，TRAE 会打开这个服务器的配置，填上 AIsa key，把 `RADAR_STATE` 改成本机的一个绝对路径，再确认：
 
 ```text
 trae-cn://trae.ai-ide/mcp-import?type=stdio&name=new-term-radar&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLXdpdGgiLCJtY3AiLCJuZXctdGVybS1yYWRhciIsIm1jcCJdLCJlbnYiOnsiQUlTQV9BUElfS0VZIjoiIiwiR09BTllBUElfQVBJX0tFWSI6IiIsIlJBREFSX1NUQVRFIjoiL2Fic29sdXRlL3BhdGgvdG8vc3RhdGUifX0%3D
 ```
 
-**WorkBuddy.** Put the JSON above in `~/.workbuddy/mcp.json`, or paste it under Plugins → MCP servers → Configure MCP.
+**WorkBuddy。** 把上面的 JSON 写进 `~/.workbuddy/mcp.json`，或者在侧边栏「插件」→ 右上角「MCP 服务器」→「配置 MCP」里粘贴。
 
-**DeepSeek Harness.** The skills: `npx skills add zhuyansen/new-term-radar -a codex` installs them in `.agents/skills` (with `-g`, in `~/.agents/skills`), where DeepSeek Harness looks too. The server goes in `~/.dsh/cordis.patch.yml` for every profile, or `~/.dsh/profiles/<name>/cordis.patch.yml` for one:
+**DeepSeek Harness。** skill：`npx skills add zhuyansen/new-term-radar -a codex` 会装进 `.agents/skills`（加 `-g` 装进 `~/.agents/skills`），DeepSeek Harness 也读这两个目录。服务器写进 `~/.dsh/cordis.patch.yml`（所有 profile 都生效），或者 `~/.dsh/profiles/<名字>/cordis.patch.yml`（只对这一个 profile）：
 
 ```yaml
 - insert:
@@ -425,58 +418,58 @@ trae-cn://trae.ai-ide/mcp-import?type=stdio&name=new-term-radar&config=eyJjb21tY
         toolCallTimeoutMs: 900000
 ```
 
-DeepSeek Harness does not pass the variables that look like keys on to a server, so the keys are named under `env`, read here from your environment. Keep the `?? ''`: without it a variable that is not set fails the entry's check and the server does not start; an empty key counts as no key. A tool gets 60 seconds unless `toolCallTimeoutMs` gives more; a `daily` run needs the 15 minutes above. `dsh web --dump-config` prints the composed entry without starting anything. Tried with DeepSeek Harness 0.2.1-rc.2.
+DeepSeek Harness 不会把环境里像密钥的变量传给服务器，所以 key 要在 `env` 下面点名，这里从你的环境变量里读。`?? ''` 别删：不加的话，哪个变量没设，这一项就过不了检查，服务器根本不启动；空着的 key 当作没有。工具调用默认只给 60 秒，用 `toolCallTimeoutMs` 调大；`daily` 要像上面这样给到 15 分钟。`dsh web --dump-config` 会打印合成后的配置，不启动任何东西。用 DeepSeek Harness 0.2.1-rc.2 实测过。
 
-## Run it on GitHub Actions
+## 在 GitHub Actions 上跑
 
-`.github/workflows/radar.yml` runs `sources` every 8 hours and `daily` once a day, keeps the state in the Actions cache, and writes each report to the run summary. It is off until you opt in:
+`.github/workflows/radar.yml` 每 8 小时跑一次 `sources`、每天跑一次 `daily`，状态存在 Actions 缓存里，报告写到每次运行的摘要页。默认关闭，需要你主动开启：
 
-1. Fork the repository (a private fork is fine).
-2. Remove `config.json` from `.gitignore` and commit your config. It holds no secrets.
-3. Add the secret `AISA_API_KEY`; optionally `GOANYAPI_API_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`, `RADAR_EMAIL_TO`, `GSC_TOKEN_JSON`.
-4. Set the repository variable `RADAR_ENABLED` to `true`.
+1. Fork 这个仓库（私有 fork 也可以）。
+2. 把 `config.json` 从 `.gitignore` 里删掉，提交你的配置。配置里没有任何密钥。
+3. 添加 secret `AISA_API_KEY`；可选 `GOANYAPI_API_KEY`、`RESEND_API_KEY`、`EMAIL_FROM`、`RADAR_EMAIL_TO`、`GSC_TOKEN_JSON`。
+4. 把仓库变量 `RADAR_ENABLED` 设为 `true`。
 
-## How the pieces decide
+## 各部分怎么判断
 
-- **Names in posts** (`radar/terms.py`): capitalised words, words with a digit (`Qwen3.8`) or inner capitals (`HyperFrames`); a number after a name joins it (`Opus 5.5`). A name two accounts used counts; a name one account used needs 100 likes and must be unmistakably a name, since a capitalised word is often just the start of a sentence.
-- **Surges in sitemaps**: counted per distinct URL against the site's own baseline, so one page with a long slug cannot fake a wave.
-- **The judge** (`radar/judge.py`): one chat call per 25 terms, each with up to three places it appeared. If the call fails the report still goes out, unsorted.
-- **The review** (`radar/review.py`): a variant counts as "rose" when its peak after the day we reported it clears its own earlier baseline by 2x and by 10 points. A word with an older meaning ("strata": rock layers, property law) has a high baseline and does not count; "niko1221 strata" going from 0 to something does. Trends' unsettled last two days are left out.
+- **帖子里的名字**（`radar/terms.py`）：首字母大写的词、带数字的词（`Qwen3.8`）、中间有大写的词（`HyperFrames`）；名字后面的数字会并进去（`Opus 5.5`）。两个账号都用过的名字算数；只有一个账号用的，需要 100 个赞，而且必须明显是名字，因为首字母大写的词常常只是句子开头。
+- **sitemap 里的上升词**：按不同网址计数，并和这个站自己的基线比，所以一个长网址造不出一波假信号。
+- **名字判断**（`radar/judge.py`）：每 25 个词一次模型调用，每个词附带最多三处出现的原文。调用失败时报告照常发出，只是不排序。
+- **复盘**（`radar/review.py`）：一个搜索写法在我们报出之后的峰值，超过它自己之前基线的 2 倍且高出 10 点，才算「涨了」。有旧含义的词（「strata」：岩层、分契式产权）基线本来就高，不算；「niko1221 strata」从 0 涨起来才算。Trends 没结算的最后两天不计入。
 
-## What we measured, and what we have not
+## 实测过什么，没测过什么
 
-- The name judge (`gpt-4.1-mini`) was run on 170 terms an earlier judge had passed as names in our own daily use. It agreed on 149. Of the 21 it rejected, most were noise the earlier judge let through (sitemap path fragments such as `io.github.wxt invoice`, `asd`); about three were real names it missed (`synthid detector`, `veo`, `v4.1 flash`), in a test that gave it less context than a real run does. It passed none of 40 common words (`dashboard`, `pricing`, `today`).
-- Hit rates per signal: not yet. The review needs 14 days per lead and ours has only begun. The one seeded check, Strata, came back a hit, three days ahead of its Trends rise. Your own report shows your numbers as they accumulate; treat any signal as unproven until then.
-- The X signal is only as good as the account list. It will not see a name none of your accounts says.
+- 名字判断（`gpt-4.1-mini`）：拿我们自己日常使用中、之前的判断器放行的 170 个词重新判了一遍，它同意其中 149 个。它拒掉的 21 个里，大部分是之前误放的噪音（sitemap 路径碎片如 `io.github.wxt invoice`、`asd`），真正漏掉的名字大约 3 个（`synthid detector`、`veo`、`v4.1 flash`），而且这次测试给它的上下文比实际运行时少。40 个普通词（`dashboard`、`pricing`、`today`）没有一个被放行。
+- 各信号的命中率：还没有。复盘每条线索要等 14 天，我们的才刚开始。唯一一条手工放进去的检查是 Strata，结论是命中，比 Trends 曲线起来早 3 天。你自己的报告会随时间显示你的数字；在那之前，任何信号都应当视为未经验证。
+- X 信号的好坏取决于账号名单。你的账号都没提到的名字，它看不到。
 
-## Known issues
+## 已知问题
 
-- The built-in stop words and the Hugging Face name cleaning are tuned for AI models and agent tooling. For another field, add `stop_words`.
-- Search volumes are not in the report. The radar tells you a name is new; check volume and the top results before you build a page for it.
+- 内置停用词和 Hugging Face 名字清洗是按 AI 模型和 agent 工具领域调的。换领域请加 `stop_words`。
+- 报告里没有搜索量。雷达只告诉你一个名字是新的；给它建页面之前，请自己查搜索量和搜索结果前排的页面形态。
 
-## Development
+## 开发
 
 ```bash
 pip install pytest markdown
 python -m pytest -q tests
 ```
 
-The tests cover the logic (name extraction, scoring, the store, the reports) and call no network.
+测试覆盖逻辑部分（名字提取、打分、存储、报告），不访问网络。
 
-## Thanks
+## 致谢
 
-- Thanks to [哥飞 @gefei55](https://x.com/gefei55) for the groundwork: the radar is built on what he lays out in his WeChat articles and on his way of looking for signals on social media first, together with how I find sources from running my own social media accounts.
-- [子木 @CoderJeffLee](https://x.com/CoderJeffLee) for the idea behind the keyword table: a new name and the generic terms downstream of it belong in one table, each with a decision.
-- [饭特稀 | Fentix @fantexi997](https://x.com/fantexi997) for [GoAnyAPI](https://goanyapi.com), the optional source of related queries and one-country Trends series.
+- 感谢[哥飞 @gefei55](https://x.com/gefei55) 奠定的基础：雷达的构建基于他在微信文章中阐述的内容，以及他首先在社交媒体上寻找信号的方法，加上做自己本身自媒体的信源寻找思路做的。
+- [子木 @CoderJeffLee](https://x.com/CoderJeffLee)：新词表的想法来自他的建议，新名字和它下游的通用词应该放在同一张表里，每行给出决策。
+- [饭特稀 | Fentix @fantexi997](https://x.com/fantexi997)：[GoAnyAPI](https://goanyapi.com)，相关查询和单个国家 Trends 走势这个可选数据源。
 
-The diagram is drawn by `docs/make_diagram.py` (needs `rsvg-convert` and `ffmpeg`).
+流程图由 `docs/make_diagram/make_diagram.py` 生成（需要 `rsvg-convert`）。
 
-## Star history
+## Star 增长
 
 [![Star history](https://api.star-history.com/svg?repos=zhuyansen/new-term-radar&type=Date)](https://star-history.com/#zhuyansen/new-term-radar&Date)
 
-## License
+## 许可
 
-MIT. Extracted from the radar that runs daily behind [agentskillshub.top](https://agentskillshub.top).
+MIT。这套雷达提取自 [agentskillshub.top](https://agentskillshub.top) 背后每天在跑的版本。
 
 <!-- mcp-name: io.github.zhuyansen/new-term-radar -->
