@@ -4,10 +4,10 @@
 
 What 0.6.0 added (the keyword table's new readings, the new sites' first words, AI answers on ⑦,
 three more payment platforms and the builders on ⑧, ⑨ just listed, ⑩ money, the side evidence) is drawn
-in purple, with a NEW tag. The picture is the animation's frame at 2 s, where a dot sits on every
-connector: rsvg-convert renders it, and does not run SVG animation.
+in purple, with a NEW tag. rsvg-convert draws the picture; the arrows keep their direction, nothing
+moves and nothing sits on the lines.
 """
-import math, subprocess, sys, tempfile
+import subprocess, sys, tempfile
 from pathlib import Path
 
 W, H = 760, 1066
@@ -83,25 +83,25 @@ def box(x, y, w, h, c, lines, marks, dashed=False, new=False, title_dy=0):
 
 T_TAG = ["NEW"]
 
-# id, points, colour, dashed, new, dot duration (s), dot begin (s)
+# id, points, colour, dashed, new
 PATHS = [
-    ("p1", [(110, 116), (330, 140)], "#D85A30", False, False, 2.4, 0.0),
-    ("p2", [(290, 116), (360, 140)], "#D85A30", False, False, 2.4, 0.6),
-    ("p3", [(470, 116), (400, 140)], "#D85A30", False, False, 2.4, 1.2),
-    ("p4", [(650, 116), (430, 140)], "#D85A30", False, False, 2.4, 1.8),
-    ("p6", [(220, 179), (240, 179)], "#D85A30", False, False, 1.2, 0.2),
-    ("p7", [(540, 179), (520, 179)], "#D85A30", False, False, 1.2, 0.8),
-    ("p8b", [(220, 262), (231, 262), (231, 200), (240, 200)], "#D85A30", False, False, 1.6, 0.5),
-    ("p7b", [(730, 179), (748, 179), (748, 432), (730, 432)], "#D85A30", False, False, 2.8, 0.4),
-    ("p5", [(380, 218), (380, 246)], "#888780", False, False, 1.2, 0.3),
-    ("p8", [(300, 290), (130, 318)], "#1D9E75", False, False, 1.6, 0.0),
-    ("p9", [(440, 290), (495, 318)], "#378ADD", False, False, 1.6, 0.4),
-    ("p15", [(495, 462), (495, 480)], "#7F77DD", False, True, 1.0, 0.3),
-    ("p10", [(370, 616), (370, 584)], "#D85A30", False, False, 1.4, 0.8),
-    ("p11", [(615, 616), (615, 584)], "#378ADD", True, False, 1.4, 1.2),
-    ("p12", [(130, 378), (130, 756), (170, 756)], "#1D9E75", False, False, 2.8, 0.2),
-    ("p13", [(260, 446), (245, 446), (245, 720)], "#378ADD", False, False, 2.2, 0.6),
-    ("p14", [(590, 848), (650, 848), (650, 756), (590, 756)], "#888780", True, False, 4.8, 0.0),
+    ("p1", [(110, 116), (330, 140)], "#D85A30", False, False),
+    ("p2", [(290, 116), (360, 140)], "#D85A30", False, False),
+    ("p3", [(470, 116), (400, 140)], "#D85A30", False, False),
+    ("p4", [(650, 116), (430, 140)], "#D85A30", False, False),
+    ("p6", [(220, 179), (240, 179)], "#D85A30", False, False),
+    ("p7", [(540, 179), (520, 179)], "#D85A30", False, False),
+    ("p8b", [(220, 262), (231, 262), (231, 200), (240, 200)], "#D85A30", False, False),
+    ("p7b", [(730, 179), (748, 179), (748, 432), (730, 432)], "#D85A30", False, False),
+    ("p5", [(380, 218), (380, 246)], "#888780", False, False),
+    ("p8", [(300, 290), (130, 318)], "#1D9E75", False, False),
+    ("p9", [(440, 290), (495, 318)], "#378ADD", False, False),
+    ("p15", [(495, 462), (495, 480)], "#7F77DD", False, True),
+    ("p10", [(370, 616), (370, 584)], "#D85A30", False, False),
+    ("p11", [(615, 616), (615, 584)], "#378ADD", True, False),
+    ("p12", [(130, 378), (130, 756), (170, 756)], "#1D9E75", False, False),
+    ("p13", [(260, 446), (245, 446), (245, 720)], "#378ADD", False, False),
+    ("p14", [(590, 848), (650, 848), (650, 756), (590, 756)], "#888780", True, False),
 ]
 DASH = ' stroke-dasharray="4 3"'
 
@@ -125,7 +125,7 @@ def scene(T, marks):
     ])
     lines = "\n".join(f'<path id="{i}" d="M{" L".join(f"{x} {y}" for x, y in p)}" fill="none" stroke="{c if marks or not new else "#888780"}" '
                       f'stroke-width="{1.4 if new and marks else 1}"{DASH if dash else ""} marker-end="url(#arrow)"/>'
-                      for i, p, c, dash, new, *_ in PATHS)
+                      for i, p, c, dash, new in PATHS)
     use = (f'<path d="M30 918 H730" stroke="#D3D1C7" stroke-width="0.5" fill="none"/>'
            f'<text x="30" y="934" font-size="12" fill="#5F5E5A" font-weight="500">{T["use_h"]}</text>')
     notes = use + f'<text x="730" y="311" text-anchor="end" font-size="11" fill="#185FA5">{T["credit"]}</text>'
@@ -152,25 +152,12 @@ def scene(T, marks):
     return head, f'{lines}\n<g font-size="14" text-anchor="middle">\n{boxes}\n</g>\n{notes}\n{legend}\n'
 
 
-def at(points, f):
-    seg = [math.dist(a, b) for a, b in zip(points, points[1:])]
-    left = f * sum(seg)
-    for (a, b), s in zip(zip(points, points[1:]), seg):
-        if left <= s:
-            k = left / s if s else 0
-            return a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k
-        left -= s
-    return points[-1]
-
-
-def main(base, at_seconds=2.0):
-    """Writes `<base>.png`: the frame the animation was stilled on, a dot on every connector."""
+def main(base):
+    """Writes `<base>.png`."""
     head, body = scene(ZH, True)
-    dots = "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4.5" fill="{c}"/>'
-                   for _, p, c, _, new, dur, b in PATHS for x, y in [at(p, ((at_seconds - b) % dur) / dur)])
     with tempfile.TemporaryDirectory() as tmp:
         f = Path(tmp) / "radar.svg"
-        f.write_text(head.replace("context-stroke", "#888780") + body + dots + "\n</svg>\n")
+        f.write_text(head.replace("context-stroke", "#888780") + body + "\n</svg>\n")
         subprocess.run(["rsvg-convert", "-w", str(W * 2), "-b", "white", str(f), "-o", base + ".png"], check=True)
 
 
