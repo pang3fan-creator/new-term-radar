@@ -250,6 +250,7 @@ def serve_mcp() -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    config.load_env()                      # the keys in ./.env, unless the environment already has them
     if (sys.argv[1:] if argv is None else argv)[:1] == ["mcp"]:
         return serve_mcp()
     prog = "python -m radar" if __package__ == "radar" else "new-term-radar"  # installed, the package has another name

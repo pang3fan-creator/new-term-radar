@@ -7,6 +7,7 @@ config.json at all, the radar runs on the example it ships with (EXAMPLE) and sa
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from . import i18n, terms
 # (uvx, pip) runs without a clone. A test keeps the two files identical.
 EXAMPLE = Path(__file__).with_name("config.example.json")
 DEFAULT = Path("config.json")
+ENV = Path(".env")
 
 DEFAULTS = {
     "lang": "en",
@@ -102,6 +104,22 @@ def _read(path: Path | None) -> tuple[dict, Path]:
     if not path.exists():
         raise SystemExit(f"{path} not found: copy config.example.json to {path.name} and edit it")
     return json.loads(path.read_text()), path.resolve().parent
+
+
+def load_env(path: Path | None = None) -> None:
+    """Fill os.environ from `path` (default ./.env): KEY=VALUE lines, `#` comments, quotes allowed.
+    A key the environment already holds keeps its value, so one run can override the file."""
+    try:
+        lines = (path or ENV).read_text().splitlines()
+    except OSError:
+        return
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, value = line.split("=", 1)
+        if name.strip():
+            os.environ.setdefault(name.strip(), value.strip().strip('"').strip("'"))
 
 
 def known(cfg: dict, term: str) -> str:

@@ -122,6 +122,7 @@ async def run_radar(command: str = "sources", skip: list[str] | None = None) -> 
 
 
 def main() -> None:
+    config.load_env()                      # the keys in ./.env, unless the environment already has them
     server.run("stdio")
 
 

@@ -1,6 +1,7 @@
 """The radar's pure logic: name extraction, signal scoring, the store, the judge's parsing,
 the review's verdict, the reports. Network calls are not exercised here."""
 import json
+import os
 import re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -2318,3 +2319,28 @@ def test_keyword_table_shows_the_year_your_rank_threads_and_the_dot_com(cfg, tmp
     zh = "\n".join(report.keyword_table(cfg, uc))
     assert "| 现在 | 近 12 个月 | 首次有搜索 |" in zh and "| **优先** · 你在第 1 → 更新现有页 |" in zh and "| 观察 → 新建页面 |" in zh
     assert "上升,6 个月 +120%" in zh and "首页上的论坛帖" in zh and "**synthiddetector.com 未注册**" in zh
+
+
+# --- load_env(): the keys come from ./.env -----------------------------------------
+
+def test_load_env_fills_the_keys_a_file_names(tmp_path, monkeypatch):
+    monkeypatch.delenv("RADAR_ENV_TEST", raising=False)
+    monkeypatch.delenv("RADAR_ENV_QUOTED", raising=False)
+    env = tmp_path / ".env"
+    env.write_text('# the keys this project uses\nRADAR_ENV_TEST=from-the-file\n\nRADAR_ENV_QUOTED="a value with spaces"\n')
+    config.load_env(env)
+    assert os.environ["RADAR_ENV_TEST"] == "from-the-file"
+    assert os.environ["RADAR_ENV_QUOTED"] == "a value with spaces"
+
+
+def test_load_env_leaves_a_key_the_environment_already_has(tmp_path, monkeypatch):
+    monkeypatch.setenv("RADAR_ENV_TEST", "from-the-shell")
+    env = tmp_path / ".env"
+    env.write_text("RADAR_ENV_TEST=from-the-file\n")
+    config.load_env(env)
+    assert os.environ["RADAR_ENV_TEST"] == "from-the-shell"
+
+
+def test_load_env_without_a_file_changes_nothing(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "ENV", tmp_path / "missing.env")
+    config.load_env()          # the default path, and no error when there is no file

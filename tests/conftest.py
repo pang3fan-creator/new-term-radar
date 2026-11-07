@@ -1,4 +1,5 @@
 import copy
+from pathlib import Path
 
 import pytest
 
@@ -8,6 +9,7 @@ from radar import aisa, config, dotcom, goanyapi, i18n, page_age
 @pytest.fixture(autouse=True)
 def english(monkeypatch):
     i18n.set_lang("en")
+    monkeypatch.setattr(config, "ENV", Path("/nonexistent/radar-test.env"))   # a test never reads the machine's .env
     monkeypatch.delenv("GOANYAPI_API_KEY", raising=False)   # the optional source is off unless a test turns it on
 
     def no_network(*a, **k):
