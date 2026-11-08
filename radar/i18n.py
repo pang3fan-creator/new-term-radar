@@ -108,13 +108,19 @@ T = {
     "kind_sitemap": ("③ sitemaps", "③ 竞品"), "kind_newsite": ("③ new site", "③ 新站"), "kind_watch": ("watch", "观察词"),
     # daily report
     "title": ("## New-term radar", "## 新词雷达"),
-    "leads_h": ("### Candidate new terms (names first; terms you already cover are marked)",
-                "### 候选新词(判为专有名词的排前面;已覆盖的会标出)"),
+    "leads_h": ("### Candidate new terms, one section per signal",
+                "### 候选新词(按信息源分节)"),
+    "leads_none": ("No new names today.", "今天没有新名字。"),
+    "bk_game": ("game", "游戏"), "bk_tool": ("AI tool", "AI 工具"), "bk_video": ("AI video", "AI 视频"),
+    "bk_image": ("AI image", "AI 图片"), "bk_voice": ("AI voice", "AI 语音"), "bk_info": ("information", "信息型"),
+    "bk_brand": ("brand", "品牌"), "bk_generic": ("generic", "普通词"),
+    "bu_inner": ("inner page", "建内页"), "bu_new": ("new site", "新建站"), "bu_watch": ("watch", "先观察"),
     "tags_note": ("🎬 video · 🎙 voice · 🖼 image: what the thing makes, the usual order of what visitors pay for (video > voice > image > text). "
                   "⚡ = a post with 1,000+ likes walks through a manual workflow or rides a trend: a one-click tool nobody has built yet. Read the posts before acting on a tag.",
                   "🎬 视频 · 🎙 语音 · 🖼 图片:它产出什么,一般用户愿意付费的顺序是 视频 > 语音 > 图片 > 文字。"
                   "⚡ = 有 1,000 赞以上的帖子在手把手讲一套手动流程,或在跟一个热梗:还没人做成一键工具。按标签行动前先读原帖。"),
-    "leads_cols": ("| Term | Signals | Name score | Known | Search variants | Examples |", "| 词 | 信号 | 名字得分 | 已覆盖 | 搜索变体 | 例子 |"),
+    "leads_cols": ("| Term | Kind | Why look | Use | Name score | Known | Examples |",
+                   "| 词 | 类型 | 为什么看 | 怎么用 | 名字得分 | 已覆盖 | 证据 |"),
     "none": ("none", "无"), "dash": ("—", "—"),
     "other_terms": ("Other rising terms (judged common words): ", "其他上升词(判为普通词):"),
     "topic_h": ("### Topic: {name}", "### 主题:{name}"),
@@ -163,7 +169,15 @@ T = {
     "st_sitemaps": ("- ③ sitemaps: {state}", "- ③ 竞品:{state}"),
     "st_record": ("- saving leads: {state}", "- 记录候选词:{state}"),
     "st_judge": ("- name judge: {state}", "- 名字判断:{state}"),
-    "cost": ("- AIsa data spend this run: {cost} (the name judge's tokens are billed apart)", "- 本次 AIsa 数据花费:{cost}(名字判断的模型调用另计)"),
+    "st_brief": ("- keyword brief: {state}", "- 关键词说明:{state}"),
+    "st_brief_ok": ("the model labelled {n}, rules filled {rules}", "模型标注 {n} 条,规则补充 {rules} 条"),
+    "st_brief_skipped": ("rules only (the model was skipped)", "只按关键词规则(跳过了模型)"),
+    "st_saved": ("- report kept in the database: {state}", "- 报告归档:{state}"),
+    "reports_foot": ("{n} reports in the last {days} days", "最近 {days} 天共 {n} 份报告"),
+    "reports_none": ("no report for {day}", "{day} 没有报告"),
+    "reports_chars": ("{n} chars", "{n} 字符"),
+    "cost": ("- AIsa data spend this run: {cost} (the judge's and the brief's tokens are billed apart)",
+             "- 本次 AIsa 数据花费:{cost}(名字判断与关键词说明的模型调用另计)"),
     # the generic terms behind the names
     "kind_usecase": ("generic term", "通用词"),
     "note_usecase": ("generic term behind {names}: {volume}/mo", "{names} 背后的通用词,月搜 {volume}"),
@@ -281,6 +295,11 @@ T = {
 def set_lang(lang: str) -> None:
     global _LANG
     _LANG = "zh" if str(lang).lower().startswith("zh") else "en"
+
+
+def lang() -> str:
+    """The report's language, as config.json set it: "en" or "zh"."""
+    return _LANG
 
 
 def t(key: str, **kw) -> str:

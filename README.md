@@ -278,6 +278,8 @@ python -m radar daily --skip x,hf --out report.md  # 其余全部，每天一次
 
 `daily` 还会在 Markdown 旁边写一份 `report.json`，包含生成报告用到的全部数据。
 
+每次运行的报告同时存进 `state/radar.db` 的 `reports` 表，一次运行一行：`python -m radar reports` 列出最近的运行，`python -m radar reports --day 2026-11-08` 取回那天的原文。`report.md` 每天被覆盖，数据库里的不会。
+
 ## config.json
 
 | 字段 | 含义 |
@@ -289,6 +291,7 @@ python -m radar daily --skip x,hf --out report.md  # 其余全部，每天一次
 | `known_terms` | 你已经有页面的词，或者永远不想看到的词。包含它或被它包含的线索会被标出，不进入复盘 |
 | `stop_words` | 你这个领域的日常用词，追加到内置列表（内置列表是按 AI 工具领域调的） |
 | `judge` | `model`（AIsa 上任意对话模型）和 `min_score`（默认 0.5） |
+| `brief` | `enabled`、`model`：给每个候选词写「类型 / 为什么看 / 怎么用」；调用失败或 `--skip brief` 时退回关键词规则 |
 | `breakout` | `window_days`、`min_stars`、`velocity_min`（每天涨星）、`delta_min`（比昨天多的星） |
 | `new_sites` | `queries`：名称和域名的 SQL LIKE 模式（`"%ai%"`），每个是一次付费查询；`weekday`（0 = 周一） |
 | `review` | `after_days`（14）和 `per_day`（每天复盘 5 条） |

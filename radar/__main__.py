@@ -23,6 +23,7 @@ Signals:
 
   python -m radar keywords "name one" "name two" [--repo "name one=owner/repo"] [--json]
   python -m radar leads    [--days 7] [--json]
+  python -m radar reports  [--days 7] [--day YYYY-MM-DD]   the reports kept in radar.db
   python -m radar pains    "keyword" [--extension ID] [--json]   what people complain about for a kind of tool
   python -m radar history  [pull|update|read|sort] [--platform stripe] [--max-usd 20] [--out sellers.csv]
                            every seller on the payment platforms of ⑧, back to 2019 (about $18 for all; see radar/seller_history.py)
@@ -49,12 +50,13 @@ from datetime import date
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import asks, breakout, config, feeds, gsc, money, new_sites, notify, pains, report, review, revenue, seller_history, sellers, \
+from . import asks, breakout, brief, config, feeds, gsc, money, new_sites, notify, pains, report, review, revenue, seller_history, sellers, \
     sidelights, sitemaps, sources, store, usecases
+from . import i18n
 from .i18n import t
 
-SKIPPABLE = {"x", "hf", "breakout", "sitemaps", "newsites", "revenue", "asks", "sellers", "gsc", "review", "judge", "usecases", "tutorials",
-             "feeds", "builders", "money", "sidelights"}
+SKIPPABLE = {"x", "hf", "breakout", "sitemaps", "newsites", "revenue", "asks", "sellers", "gsc", "review", "judge", "brief",
+             "usecases", "tutorials", "feeds", "builders", "money", "sidelights"}
 
 
 def run(fn, skip: bool = False) -> dict:
@@ -79,15 +81,29 @@ def _finish(args, text: str, subject: str) -> None:
         print(notify.send(subject, text))
 
 
+def _spent(blocks: dict, extra: dict) -> int:
+    """What this run paid for, in microdollars: every block that reports a cost."""
+    return sum(int((b or {}).get("cost_micros") or 0) for b in [*blocks.values(), *extra.values()] if isinstance(b, dict))
+
+
+def _archive(conn, command: str, text: str, blocks: dict, extra: dict) -> str:
+    """Keeps the report in radar.db. A save that fails is appended to the report, not swallowed."""
+    saved = run(lambda: {"saved": store.save_report(conn, command, _spent(blocks, extra), text)})
+    if saved.get("error"):
+        return text.rstrip("\n") + "\n" + t("st_saved", state=saved["error"]) + "\n"
+    return text
+
+
 def cmd_sources(args, cfg: dict, state: Path) -> int:
     blocks = {"x": run(lambda: sources.x_new(cfg, state), "x" in args.skip),
               "hf": run(lambda: sources.hf_new(cfg, state), "hf" in args.skip)}
     lead, judged = report.leads(cfg, blocks)
     conn = store.connect(state)
     extra = {"judge": judged, "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))})}
-    errors = any(b.get("error") for b in (*blocks.values(), *extra.values()))
+    errors = any(b.get("error") for b in (*blocks.values(), extra["judge"], extra["record"]))
     if report.named(cfg, lead) or errors:
-        _finish(args, report.sources(cfg, lead, blocks, extra), f"New-term radar · sources {date.today()}")
+        text = _archive(conn, args.command, report.sources(cfg, lead, blocks, extra), blocks, extra)
+        _finish(args, text, f"New-term radar · sources {date.today()}")
     else:
         print(t("sources_quiet") + "; ".join(f"{k} {v.get('posts', v.get('models', t('dash')))}" for k, v in blocks.items()))
     return 0
@@ -114,7 +130,9 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
     found = run(lambda: gsc.gsc_new(cfg), "gsc" in args.skip)
     lead, judged = report.leads(cfg, blocks)
     conn = store.connect(state)
-    extra = {"judge": judged, "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))})}
+    extra = {"judge": judged, "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))}),
+             "brief": run(lambda: brief.annotate(report.named(cfg, lead)[:report.SHOWN], cfg["brief"],
+                                                 use_model="brief" not in args.skip))}
     # What the viewers of a widely shared walkthrough ask for: the one-click tool behind a ⚡ lead.
     extra["tutorials"] = run(lambda: pains.tutorial_asks(cfg, report.named(cfg, lead)),
                              "tutorials" in args.skip or not cfg["tutorials"]["max_leads"])
@@ -138,7 +156,7 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
                          "sidelights" in args.skip or not paying_names(blocks))
     rev = run(lambda: review.review(cfg, conn), "review" in args.skip)
     summ = run(lambda: store.summary(conn))
-    text = report.daily(cfg, lead, blocks, found, rev, summ, extra)
+    text = _archive(conn, args.command, report.daily(cfg, lead, blocks, found, rev, summ, extra), blocks, extra)
     if args.out:
         Path(args.out).with_suffix(".json").write_text(json.dumps(
             {"leads": lead, **blocks, "gsc": found, "review": rev, "summary": summ, "keywords": extra["usecases"]}, ensure_ascii=False, indent=1, default=str))
@@ -237,6 +255,34 @@ def cmd_leads(args, state: Path) -> int:
     return 0
 
 
+def cmd_reports(args, state: Path) -> int:
+    """The reports kept in radar.db: the list of days, or one day's text back."""
+    _report_lang(args)
+    conn = store.connect(state)
+    if args.day:
+        text = store.report(conn, args.day)
+        if not text:
+            print(t("reports_none", day=args.day))
+            return 1
+        print(text)
+        return 0
+    rows = store.reports(conn, args.days)
+    for r in rows:
+        chars = t("reports_chars", n=f"{r['chars']:>6}")
+        print(f"#{r['id']:<3} {r['day']}  {r['command']:7s}  ${r['cost']:.3f}  {chars}")
+    print(t("reports_foot", n=len(rows), days=args.days))
+    return 0
+
+
+def _report_lang(args) -> None:
+    """The language the listing is written in: config.json's `lang`, without loading the rest."""
+    path = Path(args.config) if args.config else config.DEFAULT
+    try:
+        i18n.set_lang(json.loads(path.read_text()).get("lang", "en"))
+    except (OSError, ValueError, AttributeError):
+        pass
+
+
 def serve_mcp() -> int:
     """`new-term-radar mcp`: the stdio MCP server under the package's own name, so a
     client that only knows the PyPI name can start it (`uvx --with mcp new-term-radar mcp`)."""
@@ -255,10 +301,11 @@ def main(argv: list[str] | None = None) -> int:
         return serve_mcp()
     prog = "python -m radar" if __package__ == "radar" else "new-term-radar"  # installed, the package has another name
     p = argparse.ArgumentParser(prog=prog, description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("command", choices=["daily", "sources", "keywords", "leads", "pains", "history"])
+    p.add_argument("command", choices=["daily", "sources", "keywords", "leads", "reports", "pains", "history"])
     p.add_argument("names", nargs="*", help="for `keywords`: the names to read; for `history`: pull, read, sort or report")
     p.add_argument("--repo", action="append", default=[], metavar="NAME=OWNER/REPO", help="for `keywords`: a name's GitHub repository")
-    p.add_argument("--days", type=int, default=7, help="for `leads`: how far back")
+    p.add_argument("--days", type=int, default=7, help="for `leads` and `reports`: how far back")
+    p.add_argument("--day", help="for `reports`: print that day's report, YYYY-MM-DD")
     p.add_argument("--json", action="store_true", help="for `keywords` and `leads`: print JSON")
     p.add_argument("--config", help="default: ./config.json, or the example the radar ships with when there is none")
     p.add_argument("--state", default="state", help="directory for radar.db and the snapshots")
@@ -283,6 +330,8 @@ def main(argv: list[str] | None = None) -> int:
     state = Path(args.state)
     if args.command == "leads":
         return cmd_leads(args, state)
+    if args.command == "reports":
+        return cmd_reports(args, state)
     if args.command == "keywords" and not args.names:
         p.error("keywords: give at least one name")
     cfg = config.load(Path(args.config) if args.config else None)

@@ -51,12 +51,25 @@ def to_record(cfg: dict, lead: list[dict]) -> list[dict]:
     return [r for r in named(cfg, lead)[:SHOWN] if not r["known"]]
 
 
+def _leads_by_source(rows: list[dict]) -> dict[str, list[dict]]:
+    """One section per signal, in KINDS order: a name several signals found sits under the earliest."""
+    groups: dict[str, list[dict]] = {}
+    for r in rows:
+        kind = min(r["kinds"], key=lambda k: KINDS.index(k) if k in KINDS else len(KINDS))
+        groups.setdefault(kind, []).append(r)
+    order = [k for k in KINDS if k in groups] + [k for k in groups if k not in KINDS]
+    return {k: groups[k] for k in order}
+
+
 MARK = {"video": " 🎬", "voice": " 🎙", "image": " 🖼", "text": ""}
 
 
 def _marks(r: dict) -> str:
-    """What the thing makes, and ⚡ when a widely shared tutorial or trend shows a manual workflow."""
-    return MARK.get(r.get("format", "text"), "") + (" ⚡" if r.get("one_click") else "")
+    """What the thing makes, and ⚡ when a widely shared tutorial or trend shows a manual workflow.
+    The brief's kind wins when it names a medium: the report should not say "AI video" without 🎬."""
+    kind = r.get("kind")
+    return MARK.get(kind if kind in ("video", "voice", "image") else r.get("format", "text"), "") + \
+        (" ⚡" if r.get("one_click") else "")
 
 
 def _cell(text: str) -> str:
@@ -65,6 +78,29 @@ def _cell(text: str) -> str:
 
 def _score(r: dict) -> str:
     return f"{r['named']:.2f}" if "named" in r else t("dash")
+
+
+def _evidence(r: dict) -> str:
+    """The strongest evidence the row holds: what the signal counted (stars, likes, revenue), the searches
+    the thing is called by, and the first place it appeared."""
+    bits = [e[:50] for e in r.get("examples", [])[:1]]
+    if r.get("signals"):
+        bits.append("; ".join(r["signals"][:1]))
+    if len(r.get("variants") or []) > 1:
+        bits.append(", ".join(r["variants"][1:3]))
+    return _cell(" · ".join(b for b in bits if b)) or t("dash")
+
+
+def _kind_cell(r: dict) -> str:
+    return t("bk_" + r["kind"]) if r.get("kind") else t("dash")
+
+
+def _why_cell(r: dict) -> str:
+    return _cell(r.get("why") or "") or t("dash")
+
+
+def _use_cell(r: dict) -> str:
+    return t("bu_" + r["use"]) if r.get("use") else t("dash")
 
 
 def _state(block: dict, ok: str) -> str:
@@ -384,9 +420,16 @@ def _status_lines(b: dict[str, dict], extra: dict[str, dict]) -> list[str]:
         lines.append(t("st_site", site=site, state=state))
     if sm.get("error"):
         lines.append(t("st_sitemaps", state=sm["error"]))
-    for key, label in (("judge", "st_judge"), ("record", "st_record")):
-        if extra.get(key, {}).get("error"):
-            lines.append(t(label, state=extra[key]["error"]))
+    if extra.get("judge", {}).get("error"):
+        lines.append(t("st_judge", state=extra["judge"]["error"]))
+    br = extra.get("brief") or {}
+    if br.get("error"):
+        lines.append(t("st_brief", state=br["error"]))
+    elif br:
+        lines.append(t("st_brief", state=t("st_brief_skipped") if br.get("skipped")
+                       else t("st_brief_ok", n=br.get("briefed", 0), rules=br.get("by_rules", 0))))
+    if extra.get("record", {}).get("error"):
+        lines.append(t("st_record", state=extra["record"]["error"]))
     timed = [(k, v["seconds"]) for k, v in [*b.items(), *extra.items()] if isinstance(v, dict) and v.get("seconds") is not None]
     slow = sorted(((k, sec) for k, sec in timed if sec >= 60), key=lambda kv: -kv[1])
     if timed:
@@ -400,16 +443,22 @@ def _minutes(seconds: int) -> str:
 
 
 def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict, summ: dict, extra: dict[str, dict]) -> str:
+    all_named = named(cfg, lead)
+    names_ = all_named[:SHOWN]
     lines = [t("title"), *keyword_table(cfg, extra.get("usecases", {"skipped": True})), *_side_lines(extra.get("sidelights", {"skipped": True})),
-             "", t("leads_h"), "", t("leads_cols"), "|---|---|---|---|---|---|"]
-    names_ = named(cfg, lead)
-    for r in names_[:SHOWN]:
-        ex = _cell(" / ".join(e[:50] for e in r["examples"][:2]))
-        lines.append(f"| **{r['term']}**{_marks(r)} | {'; '.join(r['signals'])} | {_score(r)} | {r['known'] or t('none')} | "
-                     f"{', '.join(r['variants'][1:]) or t('dash')} | {ex} |")
-    if any(_marks(r) for r in names_[:SHOWN]):
+             "", t("leads_h"), ""]
+    groups = _leads_by_source(names_)
+    if not groups:
+        lines.append(t("leads_none"))
+    for kind, rows in groups.items():
+        lines += [f"#### {t('kind_' + kind)}", "", t("leads_cols"), "|---|---|---|---|---|---|---|"]
+        for r in rows:
+            lines.append(f"| **{r['term']}**{_marks(r)} | {_kind_cell(r)} | {_why_cell(r)} | {_use_cell(r)} | "
+                         f"{_score(r)} | {r['known'] or t('none')} | {_evidence(r)} |")
+        lines.append("")
+    if any(_marks(r) for r in names_):
         lines += ["", t("tags_note")]
-    rest = [r["term"] for r in lead if r not in names_][:OTHER_TERMS]
+    rest = [r["term"] for r in lead if r not in all_named][:OTHER_TERMS]
     if rest:
         lines += ["", t("other_terms") + ", ".join(rest)]
     lines += topic_lines(cfg, lead, b, gsc)

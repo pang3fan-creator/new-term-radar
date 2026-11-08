@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from radar import __main__ as cli
-from radar import breakout, config, gsc, i18n, judge, new_sites, notify, report, review, sitemaps, store
+from radar import aisa, breakout, brief, config, gsc, i18n, judge, new_sites, notify, report, review, sitemaps, store
 from radar import page_age as _page_age
 from radar.sources import base_name, novel_names
 from radar.terms import names
@@ -2344,3 +2344,180 @@ def test_load_env_leaves_a_key_the_environment_already_has(tmp_path, monkeypatch
 def test_load_env_without_a_file_changes_nothing(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "ENV", tmp_path / "missing.env")
     config.load_env()          # the default path, and no error when there is no file
+
+# --- the report by signal, the brief on each lead, the archive ------------------------
+
+def test_leads_by_source_gives_each_signal_its_own_section():
+    rows = [{"term": "a", "kinds": ["feed", "x"], "named": 0.9},
+            {"term": "b", "kinds": ["feed"], "named": 0.9},
+            {"term": "c", "kinds": ["hf"], "named": 0.9}]
+    groups = report._leads_by_source(rows)
+    assert list(groups) == ["x", "hf", "feed"]                 # KINDS order
+    assert [r["term"] for r in groups["x"]] == ["a"]           # two signals: under the earliest
+    assert [r["term"] for r in groups["hf"]] == ["c"]
+    assert [r["term"] for r in groups["feed"]] == ["b"]
+
+
+def test_the_daily_report_lists_a_lead_under_its_signal(cfg):
+    lead = [{"term": "switchy", "kinds": ["feed"], "signals": ["new on Product Hunt"], "examples": ["Product Hunt: Switchy"],
+             "variants": [], "posts": [], "named": 0.9, "known": "", "format": "text",
+             "kind": "tool", "why": "a new launch", "use": "new"}]
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    assert "#### ⑨ just listed" in text
+    assert "| **switchy** | AI tool | a new launch | new site | 0.90 |" in text
+
+
+def test_brief_skipped_still_fills_the_columns_from_rules():
+    rows = [{"term": "ai headshot", "format": "text"}]
+    out = brief.annotate(rows, {"enabled": True, "model": "m"}, use_model=False)
+    assert rows[0]["kind"] == "tool" and rows[0]["use"] == "watch" and out["skipped"]
+
+
+def test_brief_sends_what_the_signal_knows(monkeypatch):
+    seen = {}
+
+    def chat(model, system, user, max_tokens=1500):
+        seen["user"], seen["max_tokens"] = json.loads(user), max_tokens
+        return "[]"
+
+    monkeypatch.setattr(brief.aisa, "chat", chat)
+    rows = [{"term": "kemo", "signals": ["App Store 新上架"], "about": ("https://x", "A calendar for families"),
+             "examples": ["App Store: Kemo"]}]
+    brief.annotate(rows, {"enabled": True, "model": "m"})
+    assert seen["user"][0]["about"] == "A calendar for families"          # the product's own description
+    assert seen["user"][0]["appeared"] == ["App Store 新上架"]            # what the signal counted
+    assert seen["max_tokens"] == 3000
+
+
+def test_brief_rules_read_the_shape_of_a_term():
+    rows = [{"term": "roblox parkour", "format": "text"}, {"term": "ai headshot", "format": "text"},
+            {"term": "big news today", "format": "text"}]
+    brief.annotate(rows, {"enabled": False})
+    assert [r["kind"] for r in rows] == ["game", "tool", "info"]
+    assert all(r["use"] == "watch" for r in rows)
+
+
+def test_brief_takes_the_models_labels_and_the_rules_fill_the_rest(monkeypatch):
+    monkeypatch.setattr(brief.aisa, "chat",
+                        lambda model, system, user, max_tokens=1500: '[{"i": 0, "kind": "brand", "why": "a launch", "use": "new"}]')
+    rows = [{"term": "switchy"}, {"term": "ai headshot", "format": "text"}]
+    out = brief.annotate(rows, {"enabled": True, "model": "gpt-4.1-mini"})
+    assert rows[0]["kind"] == "brand" and rows[0]["why"] == "a launch" and rows[0]["use"] == "new"
+    assert rows[1]["kind"] == "tool" and rows[1]["use"] == "watch"      # the rules fill what the model skipped
+    assert out["briefed"] == 1
+
+
+def test_brief_asks_for_why_in_the_reports_language(monkeypatch):
+    seen = {}
+
+    def chat(model, system, user, max_tokens=1500):
+        seen["system"] = system
+        return "[]"
+
+    monkeypatch.setattr(brief.aisa, "chat", chat)
+    i18n.set_lang("zh")
+    brief.annotate([{"term": "x"}], {"enabled": True, "model": "m"})
+    assert "Chinese" in seen["system"]
+
+
+def test_brief_falls_back_to_rules_when_the_model_fails(monkeypatch):
+    def down(*a, **k):
+        raise aisa.AisaError("no key")
+    monkeypatch.setattr(brief.aisa, "chat", down)
+    rows = [{"term": "ai headshot", "format": "text"}]
+    out = brief.annotate(rows, {"enabled": True, "model": "gpt-4.1-mini"})
+    assert rows[0]["kind"] == "tool" and rows[0]["use"] == "watch"
+    assert out["error"]
+
+
+def test_every_run_is_kept_and_a_day_gives_back_its_last(tmp_path):
+    conn = store.connect(tmp_path)
+    day = date(2026, 11, 8)
+    store.save_report(conn, "daily", 12000, "## first\n", today=day)
+    store.save_report(conn, "daily", 9000, "## second\n", today=day)
+    assert store.report(conn, "2026-11-08") == "## second\n"           # the day's last run, not an overwrite
+    rows = store.reports(conn, days=7, today=day)
+    assert [r["chars"] for r in rows] == [10, 9] and {r["day"] for r in rows} == {"2026-11-08"}
+    assert rows[0]["cost"] == 0.009 and rows[1]["cost"] == 0.012        # newest first
+    assert store.report(conn, "2026-11-07") == ""
+
+def test_the_daily_report_lists_common_words_when_there_are_no_names(cfg):
+    lead = [{"term": "wired", "kinds": ["x"], "signals": ["X 1 个账号 ♥304"], "examples": [], "variants": [],
+             "posts": [], "named": 0.3, "known": "", "format": "text"}]
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    assert "No new names today." in text
+    assert "Other rising terms (judged common words): wired" in text
+
+
+def test_the_status_says_how_many_leads_the_brief_labelled(cfg):
+    lead = [{"term": "switchy", "kinds": ["feed"], "signals": ["new on Product Hunt"], "examples": ["Product Hunt: Switchy"],
+             "variants": [], "posts": [], "named": 0.9, "known": "", "format": "text", "kind": "tool",
+             "why": "a new launch", "use": "new"}]
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True},
+                         "brief": {"briefed": 3, "by_rules": 2}})
+    assert "the model labelled 3, rules filled 2" in text
+
+
+def test_a_failed_brief_says_why_in_the_status(cfg):
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    text = report.daily(cfg, [], blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True},
+                         "brief": {"briefed": 0, "error": "no AIsa key"}})
+    assert "- keyword brief: no AIsa key" in text
+
+
+def test_the_daily_report_in_chinese_lines_up(cfg):
+    i18n.set_lang("zh")
+    lead = [{"term": "switchy", "kinds": ["feed"], "signals": ["Product Hunt 新上架"], "examples": ["Product Hunt: Switchy"],
+             "variants": [], "posts": [], "named": 0.9, "known": "", "format": "text", "kind": "tool",
+             "why": "新上架的日程工具", "use": "new"}]
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    assert "#### ⑨ 新上架" in text
+    assert "| 词 | 类型 | 为什么看 | 怎么用 | 名字得分 | 已覆盖 | 证据 |" in text
+    assert "| **switchy** | AI 工具 | 新上架的日程工具 | 新建站 | 0.90 | 无 |" in text
+
+
+def test_brief_parse_survives_a_bracket_inside_the_answer():
+    answer = 'Here you go: [{"i": 0, "kind": "tool", "why": "a [beta] tool", "use": "new"}]'
+    assert brief.parse(answer, 1)[0]["why"] == "a [beta] tool"     # the regex fallback is greedy on purpose
+
+
+def test_brief_without_a_model_is_a_skip():
+    rows = [{"term": "ai headshot", "format": "text"}]
+    out = brief.annotate(rows, {"enabled": True, "model": ""})
+    assert out["skipped"] and rows[0]["kind"] == "tool"           # the rules still fill the columns
+
+
+def test_a_days_report_is_the_daily_one_when_both_ran(tmp_path):
+    conn = store.connect(tmp_path)
+    day = date(2026, 11, 8)
+    store.save_report(conn, "sources", 0, "sources text", today=day)
+    store.save_report(conn, "daily", 0, "daily text", today=day)
+    store.save_report(conn, "sources", 0, "later sources", today=day)
+    assert store.report(conn, "2026-11-08") == "daily text"
+
+
+def test_the_report_listing_ignores_a_config_that_is_not_an_object(tmp_path):
+    bad = tmp_path / "config.json"
+    bad.write_text("[1, 2, 3]")
+    cli._report_lang(type("Args", (), {"config": str(bad)})())    # no AttributeError
+
+
+def test_reports_window_keeps_only_the_last_days(tmp_path):
+    conn = store.connect(tmp_path)
+    store.save_report(conn, "daily", 0, "old", today=date(2026, 10, 31))
+    store.save_report(conn, "daily", 0, "newer", today=date(2026, 11, 8))
+    assert [r["chars"] for r in store.reports(conn, days=7, today=date(2026, 11, 8))] == [5]

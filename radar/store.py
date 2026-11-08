@@ -1,10 +1,12 @@
-"""The radar's memory: every lead it reported, in one SQLite file (state/radar.db).
+"""The radar's memory: every lead it reported, and every report, in one SQLite file (state/radar.db).
 
 record()          upserts today's leads.
 due()             leads old enough to check in DataForSEO Trends and not checked yet.
 save_verdict()    hit / miss / no_data and how many days the radar was ahead.
 recent_sources()  X and Hugging Face leads the frequent job kept since yesterday.
 summary()         hit rate and median lead per signal.
+save_report()     the report as it went out, one row a run: report.md is rewritten every run.
+reports()         the runs of the last days; report() one day's text back.
 
 Lists are stored as JSON text; the file is small (one row per term) and safe to keep in
 a CI cache or to commit.
@@ -14,7 +16,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import statistics
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 NOTES_KEPT = 10
@@ -32,13 +34,21 @@ CREATE TABLE IF NOT EXISTS leads (
   verdict     TEXT,
   lead_days   INTEGER,
   trends      TEXT
+);
+CREATE TABLE IF NOT EXISTS reports (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  day         TEXT NOT NULL,
+  made_at     TEXT NOT NULL,
+  command     TEXT NOT NULL,
+  cost_micros INTEGER NOT NULL DEFAULT 0,
+  markdown    TEXT NOT NULL
 )"""
 
 
 def connect(state_dir: Path) -> sqlite3.Connection:
     state_dir.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(state_dir / "radar.db")
-    conn.execute(SCHEMA)
+    conn.executescript(SCHEMA)
     return conn
 
 
@@ -116,3 +126,29 @@ def leads(conn: sqlite3.Connection, days: int = 7, today: date | None = None) ->
     return [{"term": t, "first_seen": f, "last_seen": l, "signals": json.loads(k), "note": (json.loads(n) or [""])[-1],
              "name_score": named, "variants": json.loads(v), "verdict": verdict, "days_ahead": ahead}
             for t, f, l, k, n, named, v, verdict, ahead in rows]
+
+
+def save_report(conn: sqlite3.Connection, command: str, cost_micros: int, markdown: str,
+                today: date | None = None) -> None:
+    """The report as it went out. report.md is rewritten on every run; a second run the same day
+    is another row, so nothing a run produced is lost."""
+    conn.execute("INSERT INTO reports (day, made_at, command, cost_micros, markdown) VALUES (?,?,?,?,?)",
+                 ((today or date.today()).isoformat(), datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                  command, int(cost_micros or 0), markdown))
+    conn.commit()
+
+
+def reports(conn: sqlite3.Connection, days: int = 14, today: date | None = None) -> list[dict]:
+    """Every run of the last `days` days, newest first, without its text."""
+    since = ((today or date.today()) - timedelta(days=days)).isoformat()
+    rows = conn.execute("SELECT id, day, made_at, command, cost_micros, length(markdown) FROM reports "
+                        "WHERE day >= ? ORDER BY id DESC", (since,)).fetchall()
+    return [{"id": i, "day": d, "made_at": made, "command": c, "cost": (cost or 0) / 1e6, "chars": n}
+            for i, d, made, c, cost, n in rows]
+
+
+def report(conn: sqlite3.Connection, day: str) -> str:
+    """A day's report, as it was written: the daily one when both ran that day, else the last; "" when none."""
+    row = conn.execute("SELECT markdown FROM reports WHERE day = ? ORDER BY (command = 'daily') DESC, id DESC LIMIT 1",
+                       (day,)).fetchone()
+    return row[0] if row else ""
