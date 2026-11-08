@@ -38,9 +38,12 @@ from .i18n import t
 
 TIMEOUT = 20
 SERP = "post_dataforseo_serp_google_organic_live_regular"
-# "AI换脸" has no word boundary between I and 换, so the Latin words are fenced by letters, not by \b
+# "AI换脸" has no word boundary between I and 换, so the Latin words are fenced by letters, not by \b.
+# TikTok names what is trending, not a tool ("Stranger Things Video Trend", "mrs doubtfire dance
+# trend"): on 2026-11-08 its 95 trending searches held no tool word at all, so trend and meme words count.
 TOOLISH = re.compile(r"(?<![a-z])(ai|app|tool|generator|filter|effect|template|prompt|editor|maker|bot|gpt|agent|plugin|extension|"
-                     r"converter|translator|avatar)s?(?![a-z])|特效|模板|滤镜|工具|生成|剪辑|一键|智能|插件", re.I)
+                     r"converter|translator|avatar|trend|meme|viral|dance|edit|clip|reel)s?(?![a-z])"
+                     r"|特效|模板|滤镜|工具|生成|剪辑|一键|智能|插件", re.I)
 LABEL = {"producthunt": "Product Hunt", "hn": "Show HN", "openrouter": "OpenRouter", "civitai": "Civitai", "appstore": "App Store",
          "awesome": "awesome list", "google_new": "Google, new this week", "trending": "trending", "rising": "rising with"}
 

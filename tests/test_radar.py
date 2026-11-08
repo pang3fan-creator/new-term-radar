@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from radar import __main__ as cli
-from radar import aisa, breakout, brief, config, gsc, i18n, judge, new_sites, notify, report, review, sitemaps, store
+from radar import aisa, breakout, brief, config, feeds, gsc, i18n, judge, new_sites, notify, report, review, sitemaps, store
 from radar import page_age as _page_age
 from radar.sources import base_name, novel_names
 from radar.terms import names
@@ -2488,6 +2488,13 @@ def test_the_daily_report_in_chinese_lines_up(cfg):
     assert "#### ⑨ 新上架" in text
     assert "| 词 | 类型 | 为什么看 | 怎么用 | 名字得分 | 已覆盖 | 证据 |" in text
     assert "| **switchy** | AI 工具 | 新上架的日程工具 | 新建站 | 0.90 | 无 |" in text
+
+
+def test_the_trending_filter_keeps_a_tiktok_trend():
+    assert feeds.TOOLISH.search("Stranger Things Video Trend")
+    assert feeds.TOOLISH.search("Zoink 7 7 7 4 Geometry Dash meme")
+    assert feeds.TOOLISH.search("mrs doubtfire dance trend")
+    assert not feeds.TOOLISH.search("Mayos de Navojoa 5-4 Venados")        # a ballgame score is not a trend
 
 
 def test_brief_parse_survives_a_bracket_inside_the_answer():
