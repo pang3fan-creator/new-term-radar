@@ -561,7 +561,8 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
             lines.append(f"{i}. **{r['term']}** — {_what(r) or _about(r['term'], b) or t('dash')}（{_kind_cell(r)} · {src}）")
         lines.append("")
     lines += [f"# {t('ch_keywords')}"]
-    lines += _body(keyword_table(cfg, extra.get("usecases", {"skipped": True}), notes=False)) or [t("uc_none")]
+    lines += _body(keyword_table(cfg, extra.get("usecases", {"skipped": True}), notes=False,
+                                 origins=_origins(lead, extra))) or [t("uc_none")]
     by_term = {r["term"]: r for r in all_named}
     for source in SOURCES:
         rows = _rows(source, b, by_term)
@@ -787,13 +788,28 @@ def _page_one_lines(cfg: dict, uc: dict, notes: bool = True) -> list[str]:
     return lines
 
 
+def _origins(lead: list[dict], extra: dict[str, dict]) -> dict[str, list[str]]:
+    """Where each word came from, from the signal lines the lead carries: the source that listed it
+    and the item it listed. A strange word in the table has to be traceable to the source that made it."""
+    out: dict[str, list[str]] = {}
+    for r in [*lead, *((extra.get("recent_sources") or {}).get("rows") or [])]:
+        key = (r.get("term") or "").lower()
+        if not key:
+            continue
+        seen = out.setdefault(key, [])
+        for s in ([r["note"]] if r.get("note") else r.get("signals") or []):
+            if s and s not in seen:
+                seen.append(s)
+    return out
+
+
 def _word_mark(r: dict) -> str:
     """What it makes, then 🔎 when Trends related queries turned it up and ⚠ when it carries a brand."""
     return MARK[opportunity.fmt({"term": r["phrase"]})] + (" 🔎" if r.get("source") == "searched" else "") + \
         (" ⚠" if r["kind"] == "generic" and r.get("brand") else "")
 
 
-def _word_lines(i: int, r: dict, uc: dict) -> list[str]:
+def _word_lines(i: int, r: dict, uc: dict, origins: dict[str, list[str]] | None = None) -> list[str]:
     """One word in up to three lines: what it is and the call, how big it is, and how hard page one looks.
     A reader decides from this, so a field that was not read is left out rather than printed as a dash."""
     generic = r["kind"] == "generic"
@@ -814,11 +830,15 @@ def _word_lines(i: int, r: dict, uc: dict) -> list[str]:
                         t("uc_pc", page=_page_one(r["competition"])) if r.get("competition") else "",
                         t("uc_shape", shape=_serp(r["serp"])) if r.get("serp") else "",
                         t("uc_first", day=age) if age and age != t("dash") else "") if x]
-    out = [head] + ([" · ".join(big)] if big else []) + ([" · ".join(hard)] if hard else [])
+    out = [head]
+    if origins is not None and not generic:      # a name: the source and the item that produced it
+        came = origins.get((r["phrase"] or "").lower()) or []
+        out.append(t("uc_origin", items=" · ".join(came[:2])) if came else t("uc_origin_none"))
+    out += ([" · ".join(big)] if big else []) + ([" · ".join(hard)] if hard else [])
     return [x + "  " for x in out[:-1]] + out[-1:]      # hard breaks when the report is rendered
 
 
-def keyword_table(cfg: dict, uc: dict, notes: bool = True) -> list[str]:
+def keyword_table(cfg: dict, uc: dict, notes: bool = True, origins: dict[str, list[str]] | None = None) -> list[str]:
     """The day's words, the names read and the generic terms behind them, one block each with a decision."""
     if uc.get("skipped"):
         return []
@@ -834,7 +854,7 @@ def keyword_table(cfg: dict, uc: dict, notes: bool = True) -> list[str]:
                 month=uc["volume_month"] or "?"),
               t("uc_bench", bench=uc["benchmark"], bench_daily=uc["bench_daily"]) if uc.get("bench_daily") else t("uc_bench_none", bench=uc["benchmark"]), ""]
     for i, r in enumerate(uc["rows"], 1):
-        lines += _word_lines(i, r, uc)
+        lines += _word_lines(i, r, uc, origins)
     lines += ["", t("uc_rules", min_daily=c["min_daily"])]
     lines += _page_one_lines(cfg, uc, notes)
     lines += _extra_lines(cfg, uc, notes)

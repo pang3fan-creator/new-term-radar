@@ -224,6 +224,8 @@ T = {
                       "日搜是按每个通用词自己的月搜索量估算的。今天没法校准基准词 `{bench}`,所以名字没有估算值。"),
     "uc_word": ("{i}. **{phrase}**{mark} ({kind}{behind}) → {decision}", "{i}. **{phrase}**{mark}（{kind}{behind}）→ {decision}"),
     "uc_behind": ("behind {names}", "来自 {names}"),
+    "uc_origin": ("from {items}", "从哪来:{items}"),
+    "uc_origin_none": ("from: no source lists it today (an older lead)", "从哪来:今天各源头都没再出现(更早的线索)"),
     "uc_pd": ("{n} searches a day", "日搜 {n}/天"),
     "uc_pd_none": ("day searches not readable yet", "日搜还读不出"),
     "uc_start": ("rising since {day}", "{day} 起涨"),
