@@ -29,6 +29,10 @@ def leads(cfg: dict, blocks: dict[str, dict]) -> tuple[list[dict], dict]:
                 row["repo"] = r["repo"]
             if r.get("about"):
                 row["about"] = r["about"]
+            if r.get("feed"):
+                row.setdefault("feeds", [])
+                if r["feed"] not in row["feeds"]:
+                    row["feeds"].append(r["feed"])
     rows = list(out.values())
     for r in rows:
         r["known"] = config.known(cfg, r["term"])
@@ -51,14 +55,132 @@ def to_record(cfg: dict, lead: list[dict]) -> list[dict]:
     return [r for r in named(cfg, lead)[:SHOWN] if not r["known"]]
 
 
-def _leads_by_source(rows: list[dict]) -> dict[str, list[dict]]:
-    """One section per signal, in KINDS order: a name several signals found sits under the earliest."""
-    groups: dict[str, list[dict]] = {}
-    for r in rows:
-        kind = min(r["kinds"], key=lambda k: KINDS.index(k) if k in KINDS else len(KINDS))
-        groups.setdefault(kind, []).append(r)
-    order = [k for k in KINDS if k in groups] + [k for k in groups if k not in KINDS]
-    return {k: groups[k] for k in order}
+# One chapter per source, in the order the README numbers them. Every chapter is written, empty
+# or not: a reader asking "what did TikTok say today" must not have to guess whether it was silent
+# or never read.
+SOURCES = ("x", "sitemap", "newsite", "producthunt", "appstore", "google_new",
+           "tiktok", "reddit", "rising", "revenue", "ask", "seller", "builder")
+SOURCE_KEY = {"x": "x", "sitemap": "sitemap", "newsite": "newsite",
+              "producthunt": "feed:producthunt", "appstore": "feed:appstore", "google_new": "feed:google_new",
+              "tiktok": "feed:trending:tiktok", "reddit": "feed:trending:reddit", "rising": "feed:rising",
+              "revenue": "revenue", "ask": "ask", "seller": "seller", "builder": "builder"}
+BLOCK = {"x": "x", "sitemap": "sitemap", "newsite": "newsite", "revenue": "revenue", "ask": "ask",
+         "seller": "seller", "builder": "builder"}
+FEED_SOURCES = {"producthunt", "appstore", "google_new", "rising", "tiktok", "reddit"}
+CHAPTER_SHOWN = 5
+TOP_SHOWN = 5
+
+
+def _from_source(r: dict, source: str) -> bool:
+    """Whether this lead came from that source: a signal name, or the platform behind a feed."""
+    key = SOURCE_KEY[source]
+    return key[5:] in (r.get("feeds") or []) if key.startswith("feed:") else key in r.get("kinds", [])
+
+
+def _body(lines: list[str]) -> list[str]:
+    """A block's lines without its own heading: the chapter above it names the source."""
+    out = list(lines)
+    while out and not out[0].strip():
+        out.pop(0)
+    if out and out[0].startswith("###"):
+        out.pop(0)
+    while out and not out[0].strip():
+        out.pop(0)
+    return out
+
+
+def _match(term: str, by_term: dict[str, dict]) -> dict:
+    """The lead for an item the source listed, when one was judged."""
+    t = (term or "").lower()
+    if t in by_term:
+        return by_term[t]
+    for k, r in by_term.items():
+        if k and (k in t or t in k):
+            return r
+    return None
+
+
+def _rows(source: str, b: dict[str, dict], by_term: dict[str, dict]) -> list[tuple[str, str, str, dict]]:
+    """Every item this source produced today: (name, what it is, the source's own number, its lead).
+
+    The chapters list what the source listed, not only what the judge called a name: a TikTok
+    trend that reads like a sentence is still what TikTok had today, and the reader decides."""
+    out = []
+    if source == "newsite":
+        for s in b.get("newsite", {}).get("sites") or []:
+            r = _match(s["domain"], by_term)
+            out.append((s["domain"], _what(r) or t("why_newsite"), t("tag_visits", etv=f"{s['etv']:,}", kw=s["keywords"]), r))
+    elif source == "revenue":
+        for p in b.get("revenue", {}).get("products") or []:
+            r = _match(p["name"], by_term)
+            out.append((p["name"], _what(r) or _clip(_cell(p["about"]), 60), t("tag_revenue", usd=f"{p['usd']:,}"), r))
+    elif source == "ask":
+        for row in b.get("ask", {}).get("rows") or []:
+            r = _match(row["phrase"], by_term)
+            out.append((row["phrase"], _what(r) or t("why_ask"), t("tag_volume", n=f"{row['volume']:,}"), r))
+    elif source == "seller":
+        for s in b.get("seller", {}).get("sellers") or []:
+            r = _match(s["host"], by_term)
+            out.append((s["host"], _what(r) or _clip(_cell(s["title"]), 60), sellers.LABEL.get(s["platform"], s["platform"]), r))
+    elif source == "builder":
+        for s in b.get("builder", {}).get("sites") or []:
+            r = _match(s["host"], by_term)
+            out.append((s["host"], _what(r) or _clip(_cell(s["title"]), 60), sellers.LABEL.get(s["platform"], s["platform"]), r))
+    elif source in FEED_SOURCES:
+        name = SOURCE_KEY[source][5:].split(":")[0]
+        where = SOURCE_KEY[source][5:].partition(":")[2]
+        for i in (b.get("feed", {}).get("new") or {}).get(name) or []:
+            if where and (i.get("where") or "") != where:
+                continue
+            r = _match(i["name"], by_term)
+            about = _cell(i.get("about") or "").replace("Discussion / Link", "").strip()
+            place = i.get("where") or ""
+            fallback = (t("why_trending") if name == "trending" else t("why_rising", seed=place) if name == "rising"
+                        else t("why_google") if name == "google_new" else "")
+            out.append((i["name"], _what(r) or _clip(about, 60) or fallback,
+                        place if name == "google_new" else "", r))
+    else:                                  # X and the sitemaps report only what the judge kept
+        out = [(r["term"], _what(r) or r["term"], "", r) for r in by_term.values() if _from_source(r, source)]
+    used = {id(r) for *_, r in out if r}
+    out += [(r["term"], _what(r), "", r) for r in by_term.values()
+            if _from_source(r, source) and id(r) not in used]      # a judged word the source no longer lists
+    return out
+
+
+def _about(name: str, b: dict[str, dict]) -> str:
+    """The description a source carried for a name, for when the brief could not run."""
+    n = (name or "").lower()
+    for items in (b.get("feed", {}).get("new") or {}).values():
+        for i in items:
+            if (i.get("name") or "").lower() == n:
+                return _clip(_cell(i.get("about") or "").replace("Discussion / Link", "").strip(), 60)
+    return ""
+
+
+def _what(r: dict | None) -> str:
+    """Why the radar kept it, in one short line."""
+    return _clip(_cell(r.get("why") or ""), 60) if r else ""
+
+
+def _line(name: str, what: str, number: str, r: dict | None) -> str:
+    """One word: what it is and why it is here, then how to use it and what the source counted."""
+    tag = " · ".join(x for x in ((t("bk_" + r["kind"]) if r and r.get("kind") else ""),
+                                 (t("bu_" + r["use"]) if r and r.get("use") else t("bu_watch")),
+                                 number) if x)
+    mark = _marks(r) if r else ""
+    return f"**{name}**{mark} — {what}（{tag}）" if what else f"**{name}**{mark}（{tag}）"
+
+
+def _chapter_state(source: str, b: dict[str, dict]) -> str:
+    """Why a chapter has nothing: skipped by --skip, or the source failed."""
+    if source in FEED_SOURCES:
+        fd = b.get("feed") or {}
+        if fd.get("skipped"):
+            return t("skipped")
+        name = SOURCE_KEY[source][5:].split(":")[0]
+        return "; ".join(e for e in fd.get("errors") or [] if e.startswith(name))
+    block = b.get(BLOCK[source]) or {}
+    return t("skipped") if block.get("skipped") else (block.get("error") or "")
 
 
 MARK = {"video": " 🎬", "voice": " 🎙", "image": " 🖼", "text": ""}
@@ -80,27 +202,8 @@ def _score(r: dict) -> str:
     return f"{r['named']:.2f}" if "named" in r else t("dash")
 
 
-def _evidence(r: dict) -> str:
-    """The strongest evidence the row holds: what the signal counted (stars, likes, revenue), the searches
-    the thing is called by, and the first place it appeared."""
-    bits = [e[:50] for e in r.get("examples", [])[:1]]
-    if r.get("signals"):
-        bits.append("; ".join(r["signals"][:1]))
-    if len(r.get("variants") or []) > 1:
-        bits.append(", ".join(r["variants"][1:3]))
-    return _cell(" · ".join(b for b in bits if b)) or t("dash")
-
-
 def _kind_cell(r: dict) -> str:
     return t("bk_" + r["kind"]) if r.get("kind") else t("dash")
-
-
-def _why_cell(r: dict) -> str:
-    return _cell(r.get("why") or "") or t("dash")
-
-
-def _use_cell(r: dict) -> str:
-    return t("bu_" + r["use"]) if r.get("use") else t("dash")
 
 
 def _state(block: dict, ok: str) -> str:
@@ -444,43 +547,53 @@ def _minutes(seconds: int) -> str:
 
 def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict, summ: dict, extra: dict[str, dict]) -> str:
     all_named = named(cfg, lead)
-    names_ = all_named[:SHOWN]
-    lines = [t("title"), *keyword_table(cfg, extra.get("usecases", {"skipped": True})), *_side_lines(extra.get("sidelights", {"skipped": True})),
-             "", t("leads_h"), ""]
-    groups = _leads_by_source(names_)
-    if not groups:
-        lines.append(t("leads_none"))
-    for kind, rows in groups.items():
-        lines += [f"#### {t('kind_' + kind)}", "", t("leads_cols"), "|---|---|---|---|---|---|---|"]
-        for r in rows:
-            lines.append(f"| **{r['term']}**{_marks(r)} | {_kind_cell(r)} | {_why_cell(r)} | {_use_cell(r)} | "
-                         f"{_score(r)} | {r['known'] or t('none')} | {_evidence(r)} |")
+    with_words = [s for s in SOURCES if any(_from_source(r, s) for r in all_named)]
+    lines = [t("title"), "", t("overview", words=len(all_named), sources=len(with_words), total=len(SOURCES),
+                               cost=_cost(b["x"], rev, b.get("newsite", {}), b.get("ask", {}), b.get("seller", {}),
+                                          extra.get("usecases", {}), extra.get("tutorials", {}), b.get("builder", {}),
+                                          b.get("feed", {}), b.get("money", {}), extra.get("sidelights", {}),
+                                          extra.get("tails", {}))),
+             ""]
+    top = sorted(all_named, key=lambda r: -(r.get("named") or 0))[:TOP_SHOWN]
+    if top:
+        lines += [f"# {t('ch_top')}", ""]
+        for i, r in enumerate(top, 1):
+            src = next((t("src_" + s) for s in SOURCES if _from_source(r, s)), "")
+            lines.append(f"{i}. **{r['term']}** — {_what(r) or _about(r['term'], b) or t('dash')}（{_kind_cell(r)} · {src}）")
         lines.append("")
-    if any(_marks(r) for r in names_):
+    lines += [f"# {t('ch_keywords')}"]
+    lines += _body(keyword_table(cfg, extra.get("usecases", {"skipped": True}), notes=False)) or [t("uc_none")]
+    by_term = {r["term"]: r for r in all_named}
+    for source in SOURCES:
+        rows = _rows(source, b, by_term)
+        lines += ["", f"# {t('src_' + source)}", ""]
+        if rows:
+            lines += [t("src_count", n=len(rows)), ""]
+            for i, (name, what, number, r) in enumerate(rows[:CHAPTER_SHOWN], 1):
+                lines.append(f"{i}. " + _line(name, what, number, r))
+            if len(rows) > CHAPTER_SHOWN:
+                lines.append(t("ch_more", n=len(rows) - CHAPTER_SHOWN))
+        else:
+            lines.append(_chapter_state(source, b) or t("src_empty"))
+    if any(_marks(r) for r in all_named):
         lines += ["", t("tags_note")]
     rest = [r["term"] for r in lead if r not in all_named][:OTHER_TERMS]
     if rest:
-        lines += ["", t("other_terms") + ", ".join(rest)]
-    lines += topic_lines(cfg, lead, b, gsc)
-    recent = extra.get("recent_sources", {"skipped": True})
-    if not recent.get("skipped"):
-        lines += ["", t("recent_h"), ""]
-        rows = recent.get("rows") or []
-        lines += [f"- **{r['term']}**: {r['note']}" for r in rows] if rows \
-            else [t("recent_none", why=recent.get("error") or t("no_new_names"))]
-    lines += _breakout_lines(b["breakout"], cfg)
-    lines += _new_site_lines(b.get("newsite", {"skipped": True}), cfg)
-    lines += _revenue_lines(b.get("revenue", {"skipped": True}), cfg)
-    lines += _asks_lines(b.get("ask", {"skipped": True}), cfg)
-    lines += _seller_lines(b.get("seller", {"skipped": True}))
-    lines += _builder_lines(b.get("builder", {"skipped": True}))
-    lines += _feed_lines(b.get("feed", {"skipped": True}))
-    lines += _money_lines(b.get("money", {"skipped": True}))
-    lines += _tail_lines(extra.get("tails", {"skipped": True}))
-    lines += _tutorial_lines(extra.get("tutorials", {"skipped": True}))
-    lines += _gsc_lines(gsc)
-    lines += _review_lines(cfg, rev, summ)
-    lines += _status_lines(b, extra)
+        lines += ["", f"# {t('ch_others')}", "", ", ".join(rest)]
+    topics = topic_lines(cfg, lead, b, gsc)
+    if topics:
+        lines += ["", f"# {t('ch_topics')}"] + topics
+    if not b["breakout"].get("skipped"):
+        lines += ["", f"# {t('src_breakout')}"] + _body(_breakout_lines(b["breakout"], cfg))
+    for key, body in (("ch_sidelights", _body(_side_lines(extra.get("sidelights", {"skipped": True})))),
+                      ("ch_money", _body(_money_lines(b.get("money", {"skipped": True})))),
+                      ("ch_tails", _body(_tail_lines(extra.get("tails", {"skipped": True})))),
+                      ("ch_tutorials", _body(_tutorial_lines(extra.get("tutorials", {"skipped": True})))),
+                      ("ch_gsc", _body(_gsc_lines(gsc)))):
+        if body:
+            lines += ["", f"# {t(key)}", ""] + body
+    lines += ["", f"# {t('ch_review')}"] + _body(_review_lines(cfg, rev, summ))
+    lines += ["", f"# {t('ch_status')}"] + _body(_status_lines(b, extra))
     lines.append(t("cost", cost=_cost(b["x"], rev, b.get("newsite", {}), b.get("ask", {}), b.get("seller", {}), extra.get("usecases", {}),
                                       extra.get("tutorials", {}), b.get("builder", {}), b.get("feed", {}), b.get("money", {}),
                                       extra.get("sidelights", {}), extra.get("tails", {}))))
@@ -559,11 +672,11 @@ def _serp(sv: dict | None) -> str:
     return " · ".join(bits)
 
 
-def _extra_lines(cfg: dict, uc: dict) -> list[str]:
+def _extra_lines(cfg: dict, uc: dict, notes: bool = True) -> list[str]:
     """Under the table: what the three extra columns mean, #1 and #2 of the prioritized rows, failures."""
     rows = uc["rows"]
     lines = []
-    if any(r.get("age") or r.get("markets") or r.get("serp") for r in rows):
+    if notes and any(r.get("age") or r.get("markets") or r.get("serp") for r in rows):
         lines.append(t("extra_note", days=cfg["word_age"]["new_days"], platforms=", ".join(cfg["serp_shape"]["platforms"])))
     tops = [(r["phrase"], r["serp"]["top"]) for r in rows if (r.get("serp") or {}).get("top")]
     if tops:
@@ -624,10 +737,10 @@ def _own_lines(cfg: dict, rows: list[dict]) -> list[str]:
     return lines
 
 
-def _thread_lines(rows: list[dict]) -> list[str]:
+def _thread_lines(rows: list[dict], notes: bool = True) -> list[str]:
     """Under the table: the note on answers above the results, and the forum threads on page one, best-of searches first."""
     comps = [r.get("competition") or {} for r in rows]
-    lines = ["", t("sf_note")] if any({"ai_overview", "featured_snippet", "answer_box"} & set(c.get("features") or []) for c in comps) else []
+    lines = ["", t("sf_note")] if notes and any({"ai_overview", "featured_snippet", "answer_box"} & set(c.get("features") or []) for c in comps) else []
     threaded = sorted((r for r in rows if (r.get("competition") or {}).get("forums")), key=lambda r: not competition.LIST.search(r["phrase"]))
     if threaded:
         lines += ["", t("sf_forums_h")]
@@ -643,22 +756,22 @@ def _dot(d: dict) -> str:
     return t("dc_taken", domain=d["domain"], day=d["registered"]) if d.get("registered") else t("dc_taken_nodate", domain=d["domain"])
 
 
-def _more_lines(cfg: dict, uc: dict) -> list[str]:
+def _more_lines(cfg: dict, uc: dict, notes: bool = True) -> list[str]:
     """Under the table, 0.7's readings: the twelve months, your pages, page-one features and threads, the .com."""
     rows = uc["rows"]
-    lines = ["", t("yr_note")] if any(r.get("year") for r in rows) else []
-    lines += _own_lines(cfg, rows) + _thread_lines(rows)
+    lines = ["", t("yr_note")] if notes and any(r.get("year") for r in rows) else []
+    lines += _own_lines(cfg, rows) + _thread_lines(rows, notes)
     checked = [r for r in rows if r.get("dot_com")]
     if checked:
         lines += ["", t("dc_h"), *[f"- **{r['phrase']}**: " + " · ".join(_dot(d) for d in r["dot_com"]) for r in checked], t("dc_note")]
     return lines
 
 
-def _page_one_lines(cfg: dict, uc: dict) -> list[str]:
+def _page_one_lines(cfg: dict, uc: dict, notes: bool = True) -> list[str]:
     rows = [r for r in uc["rows"] if r.get("competition")]
     if not rows and not uc.get("competition_errors"):
         return []
-    lines = [t("pc_note", dr=cfg["competition"]["weak_dr"])]
+    lines = [t("pc_note", dr=cfg["competition"]["weak_dr"])] if notes else []
     if rows and all(r["competition"].get("weak") is None for r in rows):
         lines.append(t("pc_no_dr"))
     weakest = [r for r in rows if r["competition"].get("weakest")]
@@ -675,7 +788,7 @@ def _page_one_lines(cfg: dict, uc: dict) -> list[str]:
     return lines
 
 
-def keyword_table(cfg: dict, uc: dict) -> list[str]:
+def keyword_table(cfg: dict, uc: dict, notes: bool = True) -> list[str]:
     """One table for the day: the names read and the generic terms behind them, each with a decision."""
     if uc.get("skipped"):
         return []
@@ -707,9 +820,9 @@ def keyword_table(cfg: dict, uc: dict) -> list[str]:
             f"{_page_one(r.get('competition'))} | {_serp(r.get('serp'))} | "
             f"{t('uc_' + r['decision'])}{' ↓' if r.get('demoted') else ''}{_yours(r.get('yours'))} |")
     lines += ["", t("uc_rules", min_daily=c["min_daily"])]
-    lines += _page_one_lines(cfg, uc)
-    lines += _extra_lines(cfg, uc)
-    lines += _more_lines(cfg, uc)
+    lines += _page_one_lines(cfg, uc, notes)
+    lines += _extra_lines(cfg, uc, notes)
+    lines += _more_lines(cfg, uc, notes)
     if any(r["kind"] == "generic" and r["brand"] for r in uc["rows"]):
         lines.append(t("uc_brand_note"))
     if any(r.get("trend_geo") for r in uc["rows"]):

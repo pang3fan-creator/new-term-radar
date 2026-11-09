@@ -2347,27 +2347,33 @@ def test_load_env_without_a_file_changes_nothing(tmp_path, monkeypatch):
 
 # --- the report by signal, the brief on each lead, the archive ------------------------
 
-def test_leads_by_source_gives_each_signal_its_own_section():
-    rows = [{"term": "a", "kinds": ["feed", "x"], "named": 0.9},
-            {"term": "b", "kinds": ["feed"], "named": 0.9},
-            {"term": "c", "kinds": ["hf"], "named": 0.9}]
-    groups = report._leads_by_source(rows)
-    assert list(groups) == ["x", "hf", "feed"]                 # KINDS order
-    assert [r["term"] for r in groups["x"]] == ["a"]           # two signals: under the earliest
-    assert [r["term"] for r in groups["hf"]] == ["c"]
-    assert [r["term"] for r in groups["feed"]] == ["b"]
+def test_a_lead_knows_which_platform_it_came_from():
+    tiktok = {"term": "kemo", "kinds": ["feed"], "feeds": ["trending:tiktok"]}
+    assert report._from_source(tiktok, "tiktok") and not report._from_source(tiktok, "producthunt")
+    x = {"term": "wired", "kinds": ["x"], "feeds": []}
+    assert report._from_source(x, "x") and not report._from_source(x, "sitemap")
 
 
-def test_the_daily_report_lists_a_lead_under_its_signal(cfg):
-    lead = [{"term": "switchy", "kinds": ["feed"], "signals": ["new on Product Hunt"], "examples": ["Product Hunt: Switchy"],
-             "variants": [], "posts": [], "named": 0.9, "known": "", "format": "text",
-             "kind": "tool", "why": "a new launch", "use": "new"}]
+def test_every_source_gets_a_chapter_even_when_it_is_empty(cfg):
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    text = report.daily(cfg, [], blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    for source in report.SOURCES:
+        assert f"# {i18n.t('src_' + source)}" in text          # every chapter, empty or not
+    assert "# Product Hunt" in text and "skipped" in text
+
+
+def test_the_daily_report_lists_a_lead_under_its_platform(cfg):
+    lead = [{"term": "switchy", "kinds": ["feed"], "feeds": ["producthunt"], "signals": ["new on Product Hunt"],
+             "examples": ["Product Hunt: Switchy"], "variants": [], "posts": [], "named": 0.9, "known": "",
+             "format": "text", "kind": "tool", "why": "a new launch", "use": "new"}]
     blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
                                              "builder", "feed", "money")}
     text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
                         {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
-    assert "#### ⑨ just listed" in text
-    assert "| **switchy** | AI tool | a new launch | new site | 0.90 |" in text
+    assert "# Product Hunt" in text and "# TikTok trending" in text
+    assert "1. **switchy** — a new launch（AI tool · new site）" in text
 
 
 def test_brief_skipped_still_fills_the_columns_from_rules():
@@ -2451,8 +2457,8 @@ def test_the_daily_report_lists_common_words_when_there_are_no_names(cfg):
                                              "builder", "feed", "money")}
     text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
                         {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
-    assert "No new names today." in text
-    assert "Other rising terms (judged common words): wired" in text
+    assert "# X" in text and "skipped" in text
+    assert "# Other rising terms (judged common words)" in text and "wired" in text
 
 
 def test_the_status_says_how_many_leads_the_brief_labelled(cfg):
@@ -2478,16 +2484,15 @@ def test_a_failed_brief_says_why_in_the_status(cfg):
 
 def test_the_daily_report_in_chinese_lines_up(cfg):
     i18n.set_lang("zh")
-    lead = [{"term": "switchy", "kinds": ["feed"], "signals": ["Product Hunt 新上架"], "examples": ["Product Hunt: Switchy"],
-             "variants": [], "posts": [], "named": 0.9, "known": "", "format": "text", "kind": "tool",
-             "why": "新上架的日程工具", "use": "new"}]
+    lead = [{"term": "switchy", "kinds": ["feed"], "feeds": ["producthunt"], "signals": ["Product Hunt 新上架"],
+             "examples": ["Product Hunt: Switchy"], "variants": [], "posts": [], "named": 0.9, "known": "",
+             "format": "text", "kind": "tool", "why": "新上架的日程工具", "use": "new"}]
     blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
                                              "builder", "feed", "money")}
     text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
                         {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
-    assert "#### ⑨ 新上架" in text
-    assert "| 词 | 类型 | 为什么看 | 怎么用 | 名字得分 | 已覆盖 | 证据 |" in text
-    assert "| **switchy** | AI 工具 | 新上架的日程工具 | 新建站 | 0.90 | 无 |" in text
+    assert "# Product Hunt" in text
+    assert "1. **switchy** — 新上架的日程工具（AI 工具 · 新建站）" in text
 
 
 def test_the_trending_filter_keeps_a_tiktok_trend():

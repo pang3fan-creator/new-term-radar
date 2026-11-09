@@ -222,9 +222,14 @@ def feeds(cfg: dict, state: Path, today: date | None = None, weekly: bool = Fals
                 continue
         fresh = sorted(fresh, key=lambda i: -(i.get("score") or 0))[:c["max_per_feed"]]
         out["new"][name] = fresh
-        out["terms"] += [{"term": i["name"].lower(), "recent": 1, "about": (i["url"], i["about"]) if i["url"] else None,
-                          "examples": [f"{LABEL[name]}{' · ' + i['where'] if i.get('where') else ''}: {i['name']}"],
-                          "note": t("note_feed", where=LABEL[name])} for i in fresh]
+        for i in fresh:
+            # Which platform it came from, so the report can give each its own chapter: `trending`
+            # covers TikTok and Reddit, and only the item knows which.
+            where = f"{name}:{i['where']}" if name == "trending" and i.get("where") else name
+            out["terms"].append({"term": i["name"].lower(), "recent": 1, "feed": where,
+                                 "about": (i["url"], i["about"]) if i["url"] else None,
+                                 "examples": [f"{LABEL[name]}{' · ' + i['where'] if i.get('where') else ''}: {i['name']}"],
+                                 "note": t("note_feed", where=LABEL[name])})
     snap.save(path, seen)
     out["terms"] = [{k: v for k, v in r.items() if v is not None} for r in out["terms"]]
     return out
