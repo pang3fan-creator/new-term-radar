@@ -630,8 +630,8 @@ def test_keyword_table_marks_brands_and_generic_terms_become_leads(cfg, tmp_path
     _fake_usecase_network(monkeypatch)
     uc = usecases.run(cfg, tmp_path, ["synthid detector"], {}, TODAY)
     text = "\n".join(report.keyword_table(cfg, uc))
-    assert "| **synthid detector** | name |" in text and "**prioritize**" in text
-    assert "| **photoshop alternative** ⚠ | generic | synthid detector |" in text and "someone's brand" in text
+    assert "**synthid detector** (name) → **prioritize**" in text
+    assert "**photoshop alternative** ⚠ (generic · behind synthid detector)" in text and "someone's brand" in text
     assert "“check if any image is AI generated”" in text
     leads = report.usecase_leads(uc)
     assert [x["term"] for x in leads] == ["ai image detector", "photoshop alternative"] and leads[0]["kinds"] == ["usecase"]
@@ -701,7 +701,8 @@ def test_with_a_key_related_queries_join_the_table_and_other_names_become_leads(
     assert uc["cosearch"] == [{"term": "gpt image 2.5", "with": "synthid detector"}]
     assert uc["tails"] == {"synthid detector": ["synthid detector online"]} and uc["cost_micros"] == 106200
     text = "\n".join(report.keyword_table(cfg, uc))
-    assert "| **ai photo detector** 🖼 🔎 |" in text and "gpt image 2.5 (with synthid detector)" in text and "synthid detector online" in text
+    assert "**ai photo detector** 🖼 🔎 (generic · behind synthid detector)" in text
+    assert "gpt image 2.5 (with synthid detector)" in text and "synthid detector online" in text
     assert "incomplete today" not in text
     assert {"term": "gpt image 2.5", "kinds": ["cosearch"]}.items() <= report.usecase_leads(uc)[-1].items()
 
@@ -787,7 +788,7 @@ def test_names_and_big_generic_terms_take_their_shape_from_the_country(cfg, tmp_
     assert "trend_geo" not in rows["synthid detector"] and uc["country_errors"] == ["synthid detector: HTTP 502"]
     text = "\n".join(report.keyword_table(cfg, uc))
     assert "still rising (US)" in text and "worldwide data used instead: synthid detector" in text
-    assert "This table is incomplete today" in text
+    assert "This chapter is incomplete today" in text
 
 
 def test_small_generic_terms_are_not_worth_a_country_lookup(cfg):
@@ -836,7 +837,7 @@ def test_a_failed_post_search_costs_one_name_its_posts_not_the_step(monkeypatch)
 def test_keywords_on_request_reads_every_name_now_and_leaves_the_record_alone(cfg, tmp_path, monkeypatch):
     _fake_usecase_network(monkeypatch)
     uc, text = cli.keyword_table(cfg, tmp_path, ["SynthID Detector ", "synthid detector", ""], {})
-    assert uc["names"] == ["synthid detector"] and "| **ai image detector** 🖼 |" in text
+    assert uc["names"] == ["synthid detector"] and "**ai image detector** 🖼 (generic · behind synthid detector)" in text
     again, _ = cli.keyword_table(cfg, tmp_path, ["synthid detector"], {})
     assert again["names"] == ["synthid detector"]                 # asked again, read again
     assert not (tmp_path / "usecases.json.gz").exists()           # the daily run's read-twice record is untouched
@@ -1247,7 +1248,7 @@ def test_a_crowded_rising_term_is_watched_not_prioritized(cfg, tmp_path, monkeyp
           "proposed": 2, "relevant": 2, "kept": 2, "benchmark": "gpts", "volume_month": "2026-08", "related": True}
     text = "\n".join(report.keyword_table(cfg, uc))
     assert "crowded · 0 weak · KD 60 · ads · 19,500 pages built · 1 advertisers" in text and "watch ↓" in text
-    assert "open · 3 weak · KD 25 · 19,500 pages built · AI overview |" in text and "advertising on it: paid.example" in text
+    assert "open · 3 weak · KD 25 · 19,500 pages built · AI overview" in text and "advertising on it: paid.example" in text
     assert "tiny1.ai (rated 8) at #3" in text and "Page one: open = three or more" in text
     assert "**crowded term**: no easy slot, even the weakest, canva.com, is rated 94 (#1)" in text
 
@@ -2072,14 +2073,14 @@ def test_keyword_table_shows_age_markets_and_shape_in_both_languages(cfg, tmp_pa
     assert uc["extra_errors"] == [] and uc["cost_micros"] == 100200 + 2 * 1200 + 2 * 90000 + 2000
     text = "\n".join(report.keyword_table(cfg, uc))
     week = (TODAY - timedelta(days=42)).isoformat()
-    assert f"| {week} 🆕 | **best US** · US 1.5k · DE 1.5k |" in text
-    assert "contested · 1 home / 2 inner · 1 platform · exact-match homepage | **prioritize** |" in text
+    assert f"first searched {week} 🆕" in text and "markets **best US** · US 1.5k · DE 1.5k" in text
+    assert "page-one shape contested · 1 home / 2 inner · 1 platform · exact-match homepage" in text and "→ **prioritize**" in text
     assert "#1 [Free AI image checker](https://synthid-detector.example/)" in text and "First searched = the first week" in text
-    assert text.splitlines()[text.splitlines().index(next(x for x in text.splitlines() if x.startswith("| Keyword")))].count("|") == 17
+    assert len([x for x in text.splitlines() if re.match(r"\d+\. \*\*", x)]) == len(uc["rows"])   # one block per word
     i18n.set_lang("zh")
     zh = "\n".join(report.keyword_table(cfg, uc))
-    assert "| 首次有搜索 | 市场(月搜/KD) | 首页竞争 | 首页结构 | 决策 |" in zh and "有争夺 · 1 首页 / 2 内页 · 1 平台" in zh
-    assert f"{week} 🆕 | **最佳 US**" in zh and "首次有搜索 = 近 5 年里" in zh
+    assert "有争夺 · 1 首页 / 2 内页 · 1 平台" in zh and "首页结构 有争夺" in zh
+    assert f"首次有搜索 {week} 🆕" in zh and "市场 **最佳 US**" in zh and "首次有搜索 = 近 5 年里" in zh
 
 
 # ---- 0.7: the twelve months, your own rank, page-one features, the .com, AI answers ----
@@ -2310,14 +2311,14 @@ def test_keyword_table_shows_the_year_your_rank_threads_and_the_dot_com(cfg, tmp
     assert [d["domain"] for d in rows["synthid detector"]["dot_com"]] == ["synthiddetector.com", "synthid-detector.com"]
     assert "dot_com" not in rows["ai image detector"] and uc["extra_errors"] == []
     text = "\n".join(report.keyword_table(cfg, uc))
-    assert "| ▄▄▄▄▄▄▅▅▆▇▇█ rising, +120% in 6 mo |" in text and "| ████████████ steady |" in text   # on the term's own scale, from zero
-    assert "| **prioritize** · you #1 → update yours |" in text and "| watch → new page |" in text
+    assert "▄▄▄▄▄▄▅▅▆▇▇█ rising, +120% in 6 mo" in text and "████████████ steady" in text   # on the term's own scale, from zero
+    assert "→ **prioritize** · you #1 → update yours" in text and "→ watch → new page" in text
     assert "- **synthid detector**: #1 on page one: https://mysite.com/synthid" in text and "Your sites: mysite.com." in text
     assert "[Is SynthID real?](https://reddit.com/r/a/1)" in text and "**synthiddetector.com not registered**" in text
     assert "12 months = Google Ads monthly searches" in text
     i18n.set_lang("zh")
     zh = "\n".join(report.keyword_table(cfg, uc))
-    assert "| 现在 | 近 12 个月 | 首次有搜索 |" in zh and "| **优先** · 你在第 1 → 更新现有页 |" in zh and "| 观察 → 新建页面 |" in zh
+    assert "→ **优先** · 你在第 1 → 更新现有页" in zh and "→ 观察 → 新建页面" in zh
     assert "上升,6 个月 +120%" in zh and "首页上的论坛帖" in zh and "**synthiddetector.com 未注册**" in zh
 
 
@@ -2450,7 +2451,7 @@ def test_every_run_is_kept_and_a_day_gives_back_its_last(tmp_path):
     assert rows[0]["cost"] == 0.009 and rows[1]["cost"] == 0.012        # newest first
     assert store.report(conn, "2026-11-07") == ""
 
-def test_the_daily_report_lists_common_words_when_there_are_no_names(cfg):
+def test_the_daily_report_counts_the_common_words_when_there_are_no_names(cfg):
     lead = [{"term": "wired", "kinds": ["x"], "signals": ["X 1 个账号 ♥304"], "examples": [], "variants": [],
              "posts": [], "named": 0.3, "known": "", "format": "text"}]
     blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
@@ -2458,7 +2459,7 @@ def test_the_daily_report_lists_common_words_when_there_are_no_names(cfg):
     text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
                         {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
     assert "# X" in text and "skipped" in text
-    assert "# Other rising terms (judged common words)" in text and "wired" in text
+    assert "1 more read and judged common; not listed." in text
 
 
 def test_the_status_says_how_many_leads_the_brief_labelled(cfg):

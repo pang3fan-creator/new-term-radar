@@ -7,7 +7,6 @@ from . import asks, competition, opportunity, sellers, config, judge, usecases, 
 from .i18n import t
 
 SHOWN = 20
-OTHER_TERMS = 15
 POSTS_SHOWN = 3   # posts quoted in full per term
 # signal key -> label key, in the order of how early the signal comes
 KINDS = ["x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller", "builder", "feed", "money", "usecase", "cosearch", "watch"]
@@ -577,9 +576,6 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
             lines.append(_chapter_state(source, b) or t("src_empty"))
     if any(_marks(r) for r in all_named):
         lines += ["", t("tags_note")]
-    rest = [r["term"] for r in lead if r not in all_named][:OTHER_TERMS]
-    if rest:
-        lines += ["", f"# {t('ch_others')}", "", ", ".join(rest)]
     topics = topic_lines(cfg, lead, b, gsc)
     if topics:
         lines += ["", f"# {t('ch_topics')}"] + topics
@@ -594,6 +590,9 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
             lines += ["", f"# {t(key)}", ""] + body
     lines += ["", f"# {t('ch_review')}"] + _body(_review_lines(cfg, rev, summ))
     lines += ["", f"# {t('ch_status')}"] + _body(_status_lines(b, extra))
+    rest = [r for r in lead if r not in all_named]
+    if rest:
+        lines.append(t("st_rest", n=len(rest)))
     lines.append(t("cost", cost=_cost(b["x"], rev, b.get("newsite", {}), b.get("ask", {}), b.get("seller", {}), extra.get("usecases", {}),
                                       extra.get("tutorials", {}), b.get("builder", {}), b.get("feed", {}), b.get("money", {}),
                                       extra.get("sidelights", {}), extra.get("tails", {}))))
@@ -788,8 +787,39 @@ def _page_one_lines(cfg: dict, uc: dict, notes: bool = True) -> list[str]:
     return lines
 
 
+def _word_mark(r: dict) -> str:
+    """What it makes, then 🔎 when Trends related queries turned it up and ⚠ when it carries a brand."""
+    return MARK[opportunity.fmt({"term": r["phrase"]})] + (" 🔎" if r.get("source") == "searched" else "") + \
+        (" ⚠" if r["kind"] == "generic" and r.get("brand") else "")
+
+
+def _word_lines(i: int, r: dict, uc: dict) -> list[str]:
+    """One word in up to three lines: what it is and the call, how big it is, and how hard page one looks.
+    A reader decides from this, so a field that was not read is left out rather than printed as a dash."""
+    generic = r["kind"] == "generic"
+    none = r.get("no_data")
+    behind = t("uc_behind", names=", ".join(r["names"])) if generic and r["names"] else ""
+    head = t("uc_word", i=i, phrase=r["phrase"], mark=_word_mark(r),
+             kind=t("uc_type_generic" if generic else "uc_type_name"), behind=(" · " + behind) if behind else "",
+             decision=t("uc_" + r["decision"]) + (" ↓" if r.get("demoted") else "") + _yours(r.get("yours")))
+    size = t("uc_pd", n=r["per_day"]) if "per_day" in r and not none else t("uc_pd_none")
+    big = [x for x in (_year(r["year"]) if r.get("year") else "", size,
+                       t("uc_start", day=r["started"]) if r.get("started") else "",
+                       t("uc_peak", day=r["peak_day"]) if r.get("peak_day") else "",
+                       t("uc_mom", m=r["momentum"]) if r.get("momentum") is not None else "",
+                       (t("uc_now_geo", now=t("uc_now_" + r["now"]), geo=uc["geo"]) if r.get("trend_geo")
+                        else t("uc_now_" + r["now"])) if r.get("now") and not none else "") if x]
+    age = "" if none else _age(r)
+    hard = [x for x in (t("uc_mk", markets=_markets(r["markets"])) if r.get("markets") else "",
+                        t("uc_pc", page=_page_one(r["competition"])) if r.get("competition") else "",
+                        t("uc_shape", shape=_serp(r["serp"])) if r.get("serp") else "",
+                        t("uc_first", day=age) if age and age != t("dash") else "") if x]
+    out = [head] + ([" · ".join(big)] if big else []) + ([" · ".join(hard)] if hard else [])
+    return [x + "  " for x in out[:-1]] + out[-1:]      # hard breaks when the report is rendered
+
+
 def keyword_table(cfg: dict, uc: dict, notes: bool = True) -> list[str]:
-    """One table for the day: the names read and the generic terms behind them, each with a decision."""
+    """The day's words, the names read and the generic terms behind them, one block each with a decision."""
     if uc.get("skipped"):
         return []
     lines = ["", t("uc_h"), ""]
@@ -802,23 +832,9 @@ def keyword_table(cfg: dict, uc: dict, notes: bool = True) -> list[str]:
         lines += [t("uc_degraded"), ""]
     lines += [t("uc_intro", names=", ".join(uc["names"]), proposed=uc["proposed"], relevant=uc["relevant"], kept=uc["kept"], min=c["min_volume"],
                 month=uc["volume_month"] or "?"),
-              t("uc_bench", bench=uc["benchmark"], bench_daily=uc["bench_daily"]) if uc.get("bench_daily") else t("uc_bench_none", bench=uc["benchmark"]), "",
-              t("uc_cols", bench=uc["benchmark"]), "|" + "---|" * 16]
-    for r in uc["rows"]:
-        generic = r["kind"] == "generic"
-        none = r.get("no_data")
-        peak = f"{r['peak_vs']} vs {r['bench_level']}" if "peak_vs" in r else t("dash")
-        lines.append(
-            f"| **{r['phrase']}**{MARK[opportunity.fmt({'term': r['phrase']})]}{' 🔎' if r.get('source') == 'searched' else ''}"
-            f"{' ⚠' if generic and r['brand'] else ''} | "
-            f"{t('uc_type_generic' if generic else 'uc_type_name')} | "
-            f"{', '.join(r['names']) or t('dash')} | {t('dash') if none else t('uc_yes' if r['new'] else 'uc_no')} | "
-            f"{r['per_day'] if 'per_day' in r else t('dash')} | {r.get('started') or t('dash')} | {peak} | "
-            f"{t('dash') if none else r['peak_day']} | {'×' + str(r['momentum']) if r.get('momentum') is not None else t('dash')} | "
-            f"{t('uc_now_none') if none else t('uc_now_' + r['now'])}{' (' + uc['geo'] + ')' if r.get('trend_geo') else ''} | "
-            f"{_year(r.get('year'))} | {_age(r)} | {_markets(r.get('markets'))} | "
-            f"{_page_one(r.get('competition'))} | {_serp(r.get('serp'))} | "
-            f"{t('uc_' + r['decision'])}{' ↓' if r.get('demoted') else ''}{_yours(r.get('yours'))} |")
+              t("uc_bench", bench=uc["benchmark"], bench_daily=uc["bench_daily"]) if uc.get("bench_daily") else t("uc_bench_none", bench=uc["benchmark"]), ""]
+    for i, r in enumerate(uc["rows"], 1):
+        lines += _word_lines(i, r, uc)
     lines += ["", t("uc_rules", min_daily=c["min_daily"])]
     lines += _page_one_lines(cfg, uc, notes)
     lines += _extra_lines(cfg, uc, notes)
