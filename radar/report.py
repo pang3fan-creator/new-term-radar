@@ -225,10 +225,18 @@ def topic_lines(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict) -> l
         if not (hits or repos or queries):
             lines.append(t("topic_none"))
             continue
-        lines += [t("topic_lead", term=r["term"], signals="; ".join(r["signals"])) for r in hits[:10]]
+        lines += [t("topic_lead", term=r["term"], signals="; ".join(r["signals"]),
+                    match=_matched(pat, r)) for r in hits[:10]]
         lines += [t("topic_repo", repo=r["repo"], stars=r["stars"], velocity=r["velocity"], desc=r["description"][:60]) for r in repos[:8]]
         lines += [t("topic_query", query=q["query"], impressions=q["impressions"], page=q["page"]) for q in queries[:8]]
     return lines
+
+
+def _matched(pat: re.Pattern, r: dict) -> str:
+    """The part of the lead that matched the topic: the whole why it is on this list, when the
+    pattern can match a domain suffix or a single common word."""
+    m = pat.search(r["term"] + " " + " ".join(r["examples"][:2]))
+    return _clip(m.group(0), 40) if m else ""
 
 
 def _breakout_lines(bo: dict, cfg: dict) -> list[str]:
@@ -557,8 +565,8 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
     if top:
         lines += [f"# {t('ch_top')}", ""]
         for i, r in enumerate(top, 1):
-            src = next((t("src_" + s) for s in SOURCES if _from_source(r, s)), "")
-            lines.append(f"{i}. **{r['term']}** — {_what(r) or _about(r['term'], b) or t('dash')}（{_kind_cell(r)} · {src}）")
+            src = " · ".join(t("src_" + s) for s in SOURCES if _from_source(r, s)) or t("dash")
+            lines.append(f"{i}. " + _line(r["term"], _what(r) or _about(r["term"], b), src, r))
         lines.append("")
     lines += [f"# {t('ch_keywords')}"]
     lines += _body(keyword_table(cfg, extra.get("usecases", {"skipped": True}), notes=False,

@@ -26,7 +26,7 @@
   },
 
   "topics": {
-    "AI video": "\\bvideos?\\b|animat|avatar|lip ?sync|seedance|\\bveo\\b|\\bsora\\b|kling|hailuo|remotion|hyperframes"
+    "AI video": "(?<!\\.)\\bvideos?\\b|animat|avatar|lip ?sync|seedance|\\bveo\\b|\\bsora\\b|kling|hailuo|remotion|hyperframes"
   },
 
   "known_terms": ["claude code", "remotion"],

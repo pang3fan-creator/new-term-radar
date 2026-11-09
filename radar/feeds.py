@@ -44,6 +44,7 @@ SERP = "post_dataforseo_serp_google_organic_live_regular"
 TOOLISH = re.compile(r"(?<![a-z])(ai|app|tool|generator|filter|effect|template|prompt|editor|maker|bot|gpt|agent|plugin|extension|"
                      r"converter|translator|avatar|trend|meme|viral|dance|edit|clip|reel)s?(?![a-z])"
                      r"|特效|模板|滤镜|工具|生成|剪辑|一键|智能|插件", re.I)
+NOTE = {"google_new": "note_feed_google_new"}      # a feed whose label does not fit the generic sentence
 LABEL = {"producthunt": "Product Hunt", "hn": "Show HN", "openrouter": "OpenRouter", "civitai": "Civitai", "appstore": "App Store",
          "awesome": "awesome list", "google_new": "Google, new this week", "trending": "trending", "rising": "rising with"}
 
@@ -229,7 +230,7 @@ def feeds(cfg: dict, state: Path, today: date | None = None, weekly: bool = Fals
             out["terms"].append({"term": i["name"].lower(), "recent": 1, "feed": where,
                                  "about": (i["url"], i["about"]) if i["url"] else None,
                                  "examples": [f"{LABEL[name]}{' · ' + i['where'] if i.get('where') else ''}: {i['name']}"],
-                                 "note": t("note_feed", where=LABEL[name])})
+                                 "note": t(NOTE.get(name, "note_feed"), where=LABEL[name])})
     snap.save(path, seen)
     out["terms"] = [{k: v for k, v in r.items() if v is not None} for r in out["terms"]]
     return out
