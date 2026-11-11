@@ -637,17 +637,6 @@ def test_keyword_table_marks_brands_and_generic_terms_become_leads(cfg, tmp_path
     assert [x["term"] for x in leads] == ["ai image detector", "photoshop alternative"] and leads[0]["kinds"] == ["usecase"]
 
 
-def test_the_keyword_table_says_which_source_each_name_came_from(cfg):
-    uc = {"names": ["mcp"], "rows": [{"phrase": "mcp", "kind": "name", "decision": "watch"}],
-          "proposed": 1, "relevant": 1, "kept": 0, "benchmark": "gpts", "volume_month": "2026-08", "related": True}
-    lead = [{"term": "mcp", "kinds": ["newsite"],
-             "signals": ["New site mcp.example (registered 2026-08-01, ~100 visits/mo, 2 ranking keywords)"]}]
-    text = "\n".join(report.keyword_table(cfg, uc, origins=report._origins(lead, {})))
-    assert "from New site mcp.example" in text                       # a strange word is traceable to its source
-    assert "no source lists it today" in "\n".join(report.keyword_table(cfg, uc, origins={}))
-    assert "\nfrom " not in "\n".join(report.keyword_table(cfg, uc))     # asked on its own, no provenance to show
-
-
 def test_review_ignores_the_unsettled_days(cfg, tmp_path, monkeypatch):
     conn = store.connect(tmp_path)
     store.record(conn, [_lead("ai image detector", ["usecase"])], date(2026, 9, 28))

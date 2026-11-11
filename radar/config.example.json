@@ -47,7 +47,7 @@
   "dot_com": {"enabled": true, "max_rows": 8},
   "ai_answers": {"enabled": false, "engines": ["chatgpt"], "max_rows": 6, "prompt": "What is the best tool to {job}?", "location_code": 2840, "language_code": "en"},
   "review": {"after_days": 14, "per_day": 5},
-  "usecases": {"per_day": 5, "model": "claude-sonnet-4-6", "benchmark": "gpts", "min_volume": 50, "min_daily": 300, "related": true, "related_geo": "US", "country_trends": true, "country_min_volume": 1000, "country_max": 8},
+  "usecases": {"per_day": 0, "model": "claude-sonnet-4-6", "benchmark": "gpts", "min_volume": 50, "min_daily": 300, "related": true, "related_geo": "US", "country_trends": true, "country_min_volume": 1000, "country_max": 8},
 
   "gsc": {}
 }

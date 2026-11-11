@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **新词表暂时下线。** `daily` 报告不再有 `# 新词表` 章节，`usecases.per_day` 默认 0，`daily` 不再跑那一步，也不再有它每天的付费查询。原因：它只从 X / HF / GitHub 爆发 / 新站 / 收入 / 新卖家六类信号里取名字，消费端信号（Product Hunt、App Store、热搜、Reddit 求助、上升搜索）进不来，选出来的必然是模型发布和开发者词；2026-11-11 18:05 那次 3 个名字花 $0.652，占当次 97.9%，5 行结果里 4 行是开发者/发布类词，剩下 1 行是 three.js 的缩写。代码 `radar/usecases.py`、`report.keyword_table()`、`python -m radar keywords` 和 MCP 工具全部保留，重启条件和步骤写在 `docs/parked.md`。报告格式方面，同一次改动不再输出该章节，其余 12 章的格式不变。
+
 ## 0.6.2 (2026-11-04)
 
 - **Page one read through Google's own redirect.** Some organic results arrive as

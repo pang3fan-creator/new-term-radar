@@ -582,9 +582,6 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
             src = " · ".join(t("src_" + s) for s in SOURCES if _from_source(r, s)) or t("dash")
             lines.append(f"{i}. " + _line(r["term"], _what(r) or _about(r["term"], b), src, r))
         lines.append("")
-    lines += [f"# {t('ch_keywords')}"]
-    lines += _body(keyword_table(cfg, extra.get("usecases", {"skipped": True}), notes=False,
-                                 origins=_origins(lead, extra))) or [t("uc_none")]
     for source in SOURCES:
         rows = rows_by[source]
         lines += ["", f"# {t('src_' + source)}", ""]
@@ -807,27 +804,6 @@ def _page_one_lines(cfg: dict, uc: dict, notes: bool = True) -> list[str]:
     if uc.get("competition_errors"):
         lines.append(t("pc_err", names="; ".join(uc["competition_errors"])))
     return lines
-
-
-def _origins(lead: list[dict], extra: dict[str, dict]) -> dict[str, list[str]]:
-    """Where each word came from, from the signal lines the lead carries: the source that listed it
-    and the item it listed. A strange word in the table has to be traceable to the source that made it."""
-    out: dict[str, list[str]] = {}
-    for r in [*lead, *((extra.get("recent_sources") or {}).get("rows") or [])]:
-        key = (r.get("term") or "").lower()
-        if not key:
-            continue
-        seen = out.setdefault(key, [])
-        # A word lifted out of a post is only traceable with the account and the sentence it came from.
-        posts = [t("uc_origin_x", account=p["account"], likes=p.get("likes") or 0, text=_clip(_cell(p.get("text") or ""), 60))
-                 for p in (r.get("posts") or [])[:2] if p.get("account")]
-        for kind, signal in zip(r.get("kinds") or [], r.get("signals") or []):
-            found = posts if kind == "x" and posts else [signal]
-            seen += [x for x in found if x and x not in seen]
-        note = r.get("note")
-        if note and note not in seen:
-            seen.append(note)
-    return out
 
 
 def _word_mark(r: dict) -> str:
