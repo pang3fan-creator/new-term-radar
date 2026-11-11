@@ -113,8 +113,8 @@ T = {
     "kind_sitemap": ("③ sitemaps", "③ 竞品"), "kind_newsite": ("③ new site", "③ 新站"), "kind_watch": ("watch", "观察词"),
     # daily report
     "title": ("## New-term radar", "## 新词雷达"),
-    "overview": ("{items} items from {sources} of {total} sources · {words} words kept · {cost}",
-                 "今天 {sources}/{total} 个源头有产出，共 {items} 条 · 判分留下 {words} 个词 · {cost}"),
+    "overview": ("read {total} sources today, {sources} of them had something: {items} items · {words} words kept · {cost}",
+                 "今天跑了 {total} 个源头,{sources} 个有产出,共 {items} 条 · 判分留下 {words} 个词 · {cost}"),
     "src_count": ("{n} words", "{n} 个"),
     "ch_top": ("Worth a look first", "先看这几个"),
     "ch_keywords": ("New-term table", "新词表"),
@@ -173,9 +173,7 @@ T = {
                    "### ② 单仓库爆发(近 {days} 天新建,按每天涨星排;🆕 = 今天第一次达标)"),
     "breakout_cols": ("| Repo | ★ | Per day | Since yesterday | Age (days) | About |", "| 仓库 | ★ | 均/天 | 比昨天 | 天数 | 简介 |"),
     "no_breakouts": ("no breakout repos", "没有爆发仓库"), "skipped": ("skipped", "跳过"),
-    "src_skipped": ("Not read today: a weekly source runs on its own day, and this one was not due.",
-                    "今天没跑这个源:按周跑的源只在固定那天跑,今天不是它的日子。"),
-    "src_off": ("Not read today: this source is off in config.json.", "今天没读这个源:配置里关掉了。"),
+
     "newsite_h": ("### ③ New sites (registered and first indexed in the last {days} days, est. visits/mo >{etv}, ≥{kw} ranking keywords; 🆕 = first seen)",
                   "### ③ 新站(近 {days} 天注册且首次被收录、月访问估值 >{etv}、排名词 ≥{kw};🆕 = 第一次出现)"),
     "newsite_cols": ("| Domain | Registered | First indexed | Visits/mo (est.) | Ranking keywords |", "| 域名 | 注册 | 首次收录 | 访问/月(估) | 排名词 |"),

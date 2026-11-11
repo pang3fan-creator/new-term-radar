@@ -170,22 +170,28 @@ def _line(name: str, what: str, number: str, r: dict | None) -> str:
     return f"**{name}**{mark} — {what}（{tag}）" if what else f"**{name}**{mark}（{tag}）"
 
 
-def _chapter_state(source: str, b: dict[str, dict], cfg: dict | None = None) -> str:
-    """Why a chapter has nothing: not read today (weekly, or off in the config), or the source failed."""
-    feeds_cfg = (cfg or {}).get("feeds") or {}
+def _not_read_today(source: str, b: dict[str, dict], cfg: dict | None = None) -> bool:
+    """Whether the source was not read today at all: a weekly source on another day, a feed turned
+    off in the config, or a step the run skipped. Such a source leaves the report instead of taking
+    a line to say it sat out; a source that ran and failed still gets its chapter and its error."""
     if source in FEED_SOURCES:
         fd = b.get("feed") or {}
         if fd.get("skipped"):
-            return t("src_skipped")
+            return True
+        feeds_cfg = (cfg or {}).get("feeds") or {}
         name = SOURCE_KEY[source][5:].split(":")[0]
-        if cfg is not None:
-            if name not in (feeds_cfg.get("enabled") or []):
-                return t("src_off")
-            if name not in (fd.get("read") or {}) and name in (feeds_cfg.get("weekly") or []):
-                return t("src_skipped")
-        return "; ".join(e for e in fd.get("errors") or [] if e.startswith(name))
-    block = b.get(BLOCK[source]) or {}
-    return t("src_skipped") if block.get("skipped") else (block.get("error") or "")
+        if feeds_cfg.get("enabled") is not None and name not in feeds_cfg["enabled"]:
+            return True
+        return name not in (fd.get("read") or {}) and name in (feeds_cfg.get("weekly") or [])
+    return bool((b.get(BLOCK[source]) or {}).get("skipped"))
+
+
+def _chapter_state(source: str, b: dict[str, dict]) -> str:
+    """Why a source that was read has nothing to show: its own error, when it failed."""
+    if source in FEED_SOURCES:
+        name = SOURCE_KEY[source][5:].split(":")[0]
+        return "; ".join(e for e in (b.get("feed") or {}).get("errors") or [] if e.startswith(name))
+    return (b.get(BLOCK[source]) or {}).get("error") or ""
 
 
 MARK = {"video": " 🎬", "voice": " 🎙", "image": " 🖼", "text": ""}
@@ -568,8 +574,9 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
     all_named = named(cfg, lead)
     by_term = {r["term"]: r for r in all_named}
     rows_by = {s: _rows(s, b, by_term) for s in SOURCES}       # one read per source: the chapters and the count agree
+    read = [s for s in SOURCES if not _not_read_today(s, b, cfg)]
     lines = [t("title"), "", t("overview", words=len(all_named), items=sum(len(v) for v in rows_by.values()),
-                               sources=len([s for s in SOURCES if rows_by[s]]), total=len(SOURCES),
+                               sources=len([s for s in read if rows_by[s]]), total=len(read),
                                cost=_cost(b["x"], rev, b.get("newsite", {}), b.get("ask", {}), b.get("seller", {}),
                                           extra.get("usecases", {}), extra.get("tutorials", {}), b.get("builder", {}),
                                           b.get("feed", {}), b.get("money", {}), extra.get("sidelights", {}),
@@ -584,6 +591,8 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
         lines.append("")
     for source in SOURCES:
         rows = rows_by[source]
+        if not rows and _not_read_today(source, b, cfg):
+            continue                                   # not read today: no chapter, no line saying so
         lines += ["", f"# {t('src_' + source)}", ""]
         if rows:
             lines += [t("src_count", n=len(rows)), ""]
@@ -592,7 +601,7 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
             if len(rows) > CHAPTER_SHOWN:
                 lines.append(t("ch_more", n=len(rows) - CHAPTER_SHOWN))
         else:
-            lines.append(_chapter_state(source, b, cfg) or t("src_empty"))
+            lines.append(_chapter_state(source, b) or t("src_empty"))
     if any(_marks(r) for r in all_named):
         lines += ["", t("tags_note")]
     topics = topic_lines(cfg, lead, b, gsc)

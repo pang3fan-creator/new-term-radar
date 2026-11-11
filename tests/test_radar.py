@@ -2369,14 +2369,14 @@ def test_a_lead_knows_which_platform_it_came_from():
     assert report._from_source(x, "x") and not report._from_source(x, "sitemap")
 
 
-def test_every_source_gets_a_chapter_even_when_it_is_empty(cfg):
+def test_a_source_that_was_not_read_today_gets_no_chapter(cfg):
     blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
                                              "builder", "feed", "money")}
     text = report.daily(cfg, [], blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
                         {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
     for source in report.SOURCES:
-        assert f"# {i18n.t('src_' + source)}" in text          # every chapter, empty or not
-    assert "# Product Hunt" in text and "Not read today" in text
+        assert f"# {i18n.t('src_' + source)}" not in text       # nothing ran: no chapter pretends otherwise
+    assert "read 0 sources today" in text
 
 
 def test_the_daily_report_lists_a_lead_under_its_platform(cfg):
@@ -2385,6 +2385,8 @@ def test_the_daily_report_lists_a_lead_under_its_platform(cfg):
              "format": "text", "kind": "tool", "why": "a new launch", "use": "new"}]
     blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
                                              "builder", "feed", "money")}
+    blocks["feed"] = {"read": {"producthunt": 1, "trending": 1}, "new": {}, "errors": []}
+    cfg["feeds"]["enabled"], cfg["feeds"]["weekly"] = ["producthunt", "trending"], []
     text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
                         {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
     assert "# Product Hunt" in text and "# TikTok trending" in text
@@ -2472,7 +2474,7 @@ def test_the_daily_report_counts_the_common_words_when_there_are_no_names(cfg):
                                              "builder", "feed", "money")}
     text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
                         {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
-    assert "# X" in text and "Not read today" in text
+    assert "# X" not in text                                    # the step was skipped: no chapter for it
     assert "1 more read and judged common; not listed." in text
 
 
