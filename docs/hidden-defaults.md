@@ -10,6 +10,7 @@
 |---|---|---|---|---|
 | `READ_KINDS` | `x, hf, breakout, newsite, revenue, seller` | `radar/usecases.py:559` | 只有这六类信号产出的名字会被拿去查关键词 | ⑨ Product Hunt / App Store / TikTok 热搜 **永远进不去**，不管分数多高 |
 | `READ_MIN` | `0.8` | `radar/usecases.py:560` | 名字得分低于 0.8 不读 | 报告里 0.5 分也能显示，看着像候选，实际永远不会被查关键词（`judge.min_score` 是 0.5） |
+| `READ_LIKES` | `1000` | `radar/usecases.py:561` | 只被**一个 X 帖**命名的词，要有第二个账号（或另一个源）再说一次，或这条帖 ≥1000 赞，才拿去查关键词 | 小账号的独发会被漏掉一天，等第二个源提到；这是 `3js`（一句 "reproduced in 3js"）被当成新词的堵点 |
 | `ASKED_MAX` | `8` | `radar/usecases.py:83` | 一次 `keywords` 最多读 8 个名字 | 给 12 个，后 4 个静默丢掉 |
 
 ## 二、能不能进报告

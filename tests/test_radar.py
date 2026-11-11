@@ -831,6 +831,16 @@ def test_only_things_are_read_for_generic_terms_not_words_that_surged():
     assert usecases.names_to_read(today, recent) == ["photocraft", "hailuo", "qwen image 2.1"]
 
 
+def test_a_word_only_one_post_names_is_not_read_until_someone_else_says_it():
+    today = [{"term": "3js", "kinds": ["x"], "named": 0.8, "posts": [{"account": "emollick", "likes": 867}]},
+             {"term": "gemini 4 carbon", "kinds": ["x"], "named": 0.9,
+              "posts": [{"account": "a", "likes": 15}, {"account": "b", "likes": 888}]},
+             {"term": "loud name", "kinds": ["x"], "named": 0.9, "posts": [{"account": "c", "likes": 5000}]},
+             {"term": "two sources", "kinds": ["x", "sitemap"], "named": 0.85, "posts": [{"account": "d", "likes": 5}]},
+             {"term": "site name", "kinds": ["newsite"], "named": 0.9}]
+    assert usecases.names_to_read(today, []) == ["gemini 4 carbon", "loud name", "two sources", "site name"]
+
+
 def test_a_failed_post_search_costs_one_name_its_posts_not_the_step(monkeypatch):
     def call(calls):
         if "photocraft" in calls[0]["arguments"]["query"]:

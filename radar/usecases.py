@@ -558,6 +558,17 @@ def run(cfg: dict, state: Path, names: list[str], repos: dict[str, str], today: 
 
 READ_KINDS = {"x", "hf", "breakout", "newsite", "revenue", "seller"}
 READ_MIN = 0.8
+READ_LIKES = 1000       # a word only one post names needs this much reach before it counts as a name
+
+
+def corroborated(r: dict) -> bool:
+    """Whether more than one post or source says the word. One post naming something that reads
+    like a product is usually a noun its author used: "reproduced in 3js" made 3js a name, and its
+    Trends curve belonged to a driving school."""
+    accounts = {p["account"] for p in r.get("posts") or [] if p.get("account")}
+    if len(accounts) >= 2 or len(set(r.get("kinds") or [])) >= 2:
+        return True
+    return max([p.get("likes") or 0 for p in r.get("posts") or []], default=0) >= READ_LIKES
 
 
 def names_to_read(leads_today: list[dict], recent_sources: list[dict]) -> list[str]:
@@ -565,12 +576,17 @@ def names_to_read(leads_today: list[dict], recent_sources: list[dict]) -> list[s
     not a word that surged. Terms that only the word-count signals found (new sitemap URLs,
     repos sharing a word) are words like "mcd" and "context protocol", or URL fragments
     like "kr.co.klisten.api": our first live run read five of those. A lead
-    needs a signal that reports things and a name score of READ_MIN; unscored leads pass."""
+    needs a signal that reports things and a name score of READ_MIN; unscored leads pass.
+    A word only one X post names waits until a second account says it or the post has reach."""
     out = []
     for r in [*leads_today, *recent_sources]:
         named = r.get("named")
-        if READ_KINDS & set(r.get("kinds", [])) and (named is None or named >= READ_MIN) and r["term"] not in out:
-            out.append(r["term"])
+        kinds = set(r.get("kinds", []))
+        if not READ_KINDS & kinds or (named is not None and named < READ_MIN) or r["term"] in out:
+            continue
+        if kinds == {"x"} and not corroborated(r):
+            continue
+        out.append(r["term"])
     return out
 
 
