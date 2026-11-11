@@ -1752,7 +1752,9 @@ def test_side_evidence_reads_certificates_wikipedia_and_google(monkeypatch):
     got = sidelights.evidence({"names": 5, "whois_names": 0, "whois_days": 30}, ["nano banana"], today=date(2026, 10, 14))
     row = got["rows"][0]
     assert row["sites"] == (1, ["nanobanana-pro-demo.app"]) and row["wiki"] == ("Nano Banana", 280, 70) and row["entity"] == {"type": "AI model"}
-    assert "| nano banana | 1 (nanobanana-pro-demo.app) | 280 / 70 | AI model |" in "\n".join(report._side_lines(got))
+    line = "\n".join(report._side_lines(got))
+    assert "- **nano banana**: new sites carrying it: 1 (nanobanana-pro-demo.app; crt.sh)" in line
+    assert "Wikipedia 280 views, 70 the week before · Google knows it as AI model" in line
     assert sidelights.new_sites("jev", date(2026, 10, 14)) == (0, [])                 # too short to search for
 
 
@@ -1832,7 +1834,9 @@ def test_side_evidence_asks_whois_for_the_first_names(monkeypatch):
     assert asked == ["%nanobanana%"] and got["cost_micros"] == 121200
     assert got["rows"][0]["sites"] == (4, ["nanobanana-demo.app", "nano-banana-demo.ai"]) and got["rows"][0]["sites_from"] == "whois"
     assert got["rows"][1]["sites"] == (0, []) and "sites_from" not in got["rows"][1]           # crt.sh for the rest
-    assert "4 (nanobanana-demo.app, nano-banana-demo.ai) · whois" in "\n".join(report._side_lines(got))
+    line = "\n".join(report._side_lines(got))
+    assert "new sites carrying it: 4 (nanobanana-demo.app, nano-banana-demo.ai; whois)" in line
+    assert "- **seedream five**: new sites carrying it: 0 (crt.sh)" in line      # looked, nothing found
 
 
 def test_rising_words_must_share_the_seed(cfg, tmp_path, monkeypatch):
@@ -2373,7 +2377,7 @@ def test_every_source_gets_a_chapter_even_when_it_is_empty(cfg):
                         {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
     for source in report.SOURCES:
         assert f"# {i18n.t('src_' + source)}" in text          # every chapter, empty or not
-    assert "# Product Hunt" in text and "skipped" in text
+    assert "# Product Hunt" in text and "Not read today" in text
 
 
 def test_the_daily_report_lists_a_lead_under_its_platform(cfg):
@@ -2469,7 +2473,7 @@ def test_the_daily_report_counts_the_common_words_when_there_are_no_names(cfg):
                                              "builder", "feed", "money")}
     text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
                         {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
-    assert "# X" in text and "skipped" in text
+    assert "# X" in text and "Not read today" in text
     assert "1 more read and judged common; not listed." in text
 
 

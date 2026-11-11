@@ -175,11 +175,11 @@ def _chapter_state(source: str, b: dict[str, dict]) -> str:
     if source in FEED_SOURCES:
         fd = b.get("feed") or {}
         if fd.get("skipped"):
-            return t("skipped")
+            return t("src_skipped")
         name = SOURCE_KEY[source][5:].split(":")[0]
         return "; ".join(e for e in fd.get("errors") or [] if e.startswith(name))
     block = b.get(BLOCK[source]) or {}
-    return t("skipped") if block.get("skipped") else (block.get("error") or "")
+    return t("src_skipped") if block.get("skipped") else (block.get("error") or "")
 
 
 MARK = {"video": " 🎬", "voice": " 🎙", "image": " 🖼", "text": ""}
@@ -396,14 +396,20 @@ def _side_lines(sd: dict) -> list[str]:
     rows = [r for r in sd.get("rows") or [] if any(k in r for k in ("sites", "wiki", "entity", "discord"))]
     if sd.get("skipped") or not rows:
         return []
-    lines = ["", t("side_h"), "", t("side_cols"), "|---|---|---|---|---|"]
+    lines = ["", t("side_h"), ""]
     for r in rows:
-        sites = f"{r['sites'][0]} ({', '.join(r['sites'][1])})" if r.get("sites") and r["sites"][0] else (t("dash") if "sites" not in r else "0")
-        sites += " · whois" if r.get("sites_from") == "whois" and "sites" in r else ""
-        wiki = f"{r['wiki'][1]:,} / {r['wiki'][2]:,}" if r.get("wiki") and r["wiki"][0] else t("dash")
         ent = r.get("entity") or {}
-        known = ent.get("type") or (t("side_taken", type=ent["taken"]) if ent.get("taken") else t("dash"))
-        lines.append(f"| {r['name']} | {sites} | {wiki} | {known} | {r.get('discord', t('dash'))} |")
+        kind = "whois" if r.get("sites_from") == "whois" else "crt.sh"
+        sites = r["sites"][0] if r.get("sites") and r["sites"][0] else "0"
+        more = ", ".join(r["sites"][1]) if r.get("sites") and r["sites"][0] else ""
+        bits = [x for x in (
+            t("side_sites_more", sites=sites, more=more, kind=kind) if more else t("side_sites", sites=sites, kind=kind)
+            if "sites" in r else "",
+            t("side_wiki", recent=f"{r['wiki'][1]:,}", before=f"{r['wiki'][2]:,}") if r.get("wiki") and r["wiki"][0] else "",
+            t("side_known", type=ent["type"]) if ent.get("type") else "",
+            t("side_taken", type=ent["taken"]) if ent.get("taken") else "",
+            t("side_discord", n=r["discord"]) if r.get("discord") is not None else "") if x]
+        lines.append(f"- **{r['name']}**: " + (" · ".join(bits) or t("side_none")))
     return lines
 
 
@@ -554,8 +560,10 @@ def _minutes(seconds: int) -> str:
 
 def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict, summ: dict, extra: dict[str, dict]) -> str:
     all_named = named(cfg, lead)
-    with_words = [s for s in SOURCES if any(_from_source(r, s) for r in all_named)]
-    lines = [t("title"), "", t("overview", words=len(all_named), sources=len(with_words), total=len(SOURCES),
+    by_term = {r["term"]: r for r in all_named}
+    rows_by = {s: _rows(s, b, by_term) for s in SOURCES}       # one read per source: the chapters and the count agree
+    lines = [t("title"), "", t("overview", words=len(all_named), items=sum(len(v) for v in rows_by.values()),
+                               sources=len([s for s in SOURCES if rows_by[s]]), total=len(SOURCES),
                                cost=_cost(b["x"], rev, b.get("newsite", {}), b.get("ask", {}), b.get("seller", {}),
                                           extra.get("usecases", {}), extra.get("tutorials", {}), b.get("builder", {}),
                                           b.get("feed", {}), b.get("money", {}), extra.get("sidelights", {}),
@@ -571,9 +579,8 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
     lines += [f"# {t('ch_keywords')}"]
     lines += _body(keyword_table(cfg, extra.get("usecases", {"skipped": True}), notes=False,
                                  origins=_origins(lead, extra))) or [t("uc_none")]
-    by_term = {r["term"]: r for r in all_named}
     for source in SOURCES:
-        rows = _rows(source, b, by_term)
+        rows = rows_by[source]
         lines += ["", f"# {t('src_' + source)}", ""]
         if rows:
             lines += [t("src_count", n=len(rows)), ""]
@@ -805,9 +812,15 @@ def _origins(lead: list[dict], extra: dict[str, dict]) -> dict[str, list[str]]:
         if not key:
             continue
         seen = out.setdefault(key, [])
-        for s in ([r["note"]] if r.get("note") else r.get("signals") or []):
-            if s and s not in seen:
-                seen.append(s)
+        # A word lifted out of a post is only traceable with the account and the sentence it came from.
+        posts = [t("uc_origin_x", account=p["account"], likes=p.get("likes") or 0, text=_clip(_cell(p.get("text") or ""), 60))
+                 for p in (r.get("posts") or [])[:2] if p.get("account")]
+        for kind, signal in zip(r.get("kinds") or [], r.get("signals") or []):
+            found = posts if kind == "x" and posts else [signal]
+            seen += [x for x in found if x and x not in seen]
+        note = r.get("note")
+        if note and note not in seen:
+            seen.append(note)
     return out
 
 
@@ -834,15 +847,16 @@ def _word_lines(i: int, r: dict, uc: dict, origins: dict[str, list[str]] | None 
                        (t("uc_now_geo", now=t("uc_now_" + r["now"]), geo=uc["geo"]) if r.get("trend_geo")
                         else t("uc_now_" + r["now"])) if r.get("now") and not none else "") if x]
     age = "" if none else _age(r)
-    hard = [x for x in (t("uc_mk", markets=_markets(r["markets"])) if r.get("markets") else "",
-                        t("uc_pc", page=_page_one(r["competition"])) if r.get("competition") else "",
-                        t("uc_shape", shape=_serp(r["serp"])) if r.get("serp") else "",
-                        t("uc_first", day=age) if age and age != t("dash") else "") if x]
+    demand = [x for x in (t("uc_mk", markets=_markets(r["markets"])) if r.get("markets") else "",
+                          t("uc_first", day=age) if age and age != t("dash") else "") if x]
+    page = [x for x in (t("uc_pc", page=_page_one(r["competition"])) if r.get("competition") else "",
+                        t("uc_shape", shape=_serp(r["serp"])) if r.get("serp") else "") if x]
     out = [head]
     if origins is not None and not generic:      # a name: the source and the item that produced it
         came = origins.get((r["phrase"] or "").lower()) or []
         out.append(t("uc_origin", items=" · ".join(came[:2])) if came else t("uc_origin_none"))
-    out += ([" · ".join(big)] if big else []) + ([" · ".join(hard)] if hard else [])
+    out += [x for x in (" · ".join(big) if big else "", " · ".join(demand) if demand else "",
+                        " · ".join(page) if page else "") if x]
     return [x + "  " for x in out[:-1]] + out[-1:]      # hard breaks when the report is rendered
 
 
