@@ -2391,6 +2391,24 @@ def test_the_daily_report_lists_a_lead_under_its_platform(cfg):
                         {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
     assert "# Product Hunt" in text and "# TikTok trending" in text
     assert "1. **switchy** — a new launch（AI tool · new site）" in text
+    lead[0]["need"] = "private notes app"                 # the need is shown, the product name kept
+    text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    assert "1. **private notes app** ← switchy — a new launch（AI tool · new site）" in text
+
+
+def test_the_sitemap_chapter_lists_needs_and_puts_brand_names_in_one_line(cfg):
+    lead = [{"term": "ai headshot", "kinds": ["sitemap"], "signals": ["③ sitemaps 9 places (×4.1)"], "examples": [],
+             "variants": [], "posts": [], "named": 0.9, "known": "", "format": "text", "kind": "tool",
+             "why": "headshots generated from one photo", "need": "ai headshot generator", "use": "new"}]
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    blocks["sitemap"] = {"terms": [{"term": "ai headshot", "recent": 9, "examples": ["https://a.example/ai-headshot"]},
+                                   {"term": "deepseek", "recent": 22, "examples": []}], "sites": {}}
+    text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    assert f"# {i18n.t('src_sitemap')}" in text and "1. **ai headshot generator** ← ai headshot" in text
+    assert "not needs: deepseek" in text and "deepseek" in text
 
 
 def test_brief_skipped_still_fills_the_columns_from_rules():
@@ -2421,6 +2439,15 @@ def test_brief_rules_read_the_shape_of_a_term():
     brief.annotate(rows, {"enabled": False})
     assert [r["kind"] for r in rows] == ["game", "tool", "info"]
     assert all(r["use"] == "watch" for r in rows)
+
+
+def test_brief_keeps_the_need_and_leaves_it_empty_for_a_brand(monkeypatch):
+    monkeypatch.setattr(brief.aisa, "chat", lambda model, system, user, max_tokens=1500: json.dumps([
+        {"i": 0, "kind": "tool", "why": "cuts long videos down", "need": "ai video clipping", "use": "new"},
+        {"i": 1, "kind": "brand", "why": "a company name", "need": "", "use": "watch"}]))
+    rows = [{"term": "OpusClip"}, {"term": "deepseek"}]
+    brief.annotate(rows, {"enabled": True, "model": "m"})
+    assert rows[0]["need"] == "ai video clipping" and rows[1]["need"] == ""
 
 
 def test_brief_takes_the_models_labels_and_the_rules_fill_the_rest(monkeypatch):

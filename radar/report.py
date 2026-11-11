@@ -66,7 +66,6 @@ SOURCE_KEY = {"x": "x", "sitemap": "sitemap", "newsite": "newsite",
 BLOCK = {"x": "x", "sitemap": "sitemap", "newsite": "newsite", "revenue": "revenue", "ask": "ask",
          "seller": "seller", "builder": "builder"}
 FEED_SOURCES = {"producthunt", "appstore", "google_new", "rising", "tiktok", "reddit"}
-CHAPTER_SHOWN = 5
 TOP_SHOWN = 5
 
 
@@ -138,7 +137,11 @@ def _rows(source: str, b: dict[str, dict], by_term: dict[str, dict]) -> list[tup
                         else t("why_google") if name == "google_new" else "")
             out.append((i["name"], _what(r) or _clip(about, 60) or fallback,
                         place if name == "google_new" else "", r))
-    else:                                  # X and the sitemaps report only what the judge kept
+    elif source == "sitemap":
+        for term in b.get("sitemap", {}).get("terms") or []:
+            r = _match(term["term"], by_term)
+            out.append((term["term"], _what(r) or t("why_sitemap"), t("tag_comp", n=term["recent"]), r))
+    else:                                  # X reports what the judge kept
         out = [(r["term"], _what(r) or r["term"], "", r) for r in by_term.values() if _from_source(r, source)]
     used = {id(r) for *_, r in out if r}
     out += [(r["term"], _what(r), "", r) for r in by_term.values()
@@ -167,7 +170,8 @@ def _line(name: str, what: str, number: str, r: dict | None) -> str:
                                  (t("bu_" + r["use"]) if r and r.get("use") else t("bu_watch")),
                                  number) if x)
     mark = _marks(r) if r else ""
-    return f"**{name}**{mark} — {what}（{tag}）" if what else f"**{name}**{mark}（{tag}）"
+    head = t("line_need", need=_cell(r["need"]), name=name) if r and r.get("need") else f"**{name}**"
+    return f"{head}{mark} — {what}（{tag}）" if what else f"{head}{mark}（{tag}）"
 
 
 def _not_read_today(source: str, b: dict[str, dict], cfg: dict | None = None) -> bool:
@@ -596,21 +600,25 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
         lines += ["", f"# {t('src_' + source)}", ""]
         if rows:
             lines += [t("src_count", n=len(rows)), ""]
-            for i, (name, what, number, r) in enumerate(rows[:CHAPTER_SHOWN], 1):
-                lines.append(f"{i}. " + _line(name, what, number, r))
-            if len(rows) > CHAPTER_SHOWN:
-                lines.append(t("ch_more", n=len(rows) - CHAPTER_SHOWN))
+            if source == "sitemap":          # brands are not keywords: one line for them, the needs listed
+                needs = [x for x in rows if x[3] and x[3].get("need")]
+                rest = [x for x in rows if not (x[3] and x[3].get("need"))]
+                for i, (name, what, number, r) in enumerate(needs, 1):
+                    lines.append(f"{i}. " + _line(name, what, number, r))
+                if rest:
+                    shown = "、".join(x[0] for x in rest[:6])
+                    lines.append(t("sitemap_rest", names=shown) if len(rest) <= 6 else
+                                 t("sitemap_rest_more", names=shown, n=len(rest)))
+            else:
+                for i, (name, what, number, r) in enumerate(rows, 1):     # every item the source listed
+                    lines.append(f"{i}. " + _line(name, what, number, r))
         else:
             lines.append(_chapter_state(source, b) or t("src_empty"))
     if any(_marks(r) for r in all_named):
         lines += ["", t("tags_note")]
-    topics = topic_lines(cfg, lead, b, gsc)
-    if topics:
-        lines += ["", f"# {t('ch_topics')}"] + topics
     if not b["breakout"].get("skipped"):
         lines += ["", f"# {t('src_breakout')}"] + _body(_breakout_lines(b["breakout"], cfg))
-    for key, body in (("ch_sidelights", _body(_side_lines(extra.get("sidelights", {"skipped": True})))),
-                      ("ch_money", _body(_money_lines(b.get("money", {"skipped": True})))),
+    for key, body in (("ch_money", _body(_money_lines(b.get("money", {"skipped": True})))),
                       ("ch_tails", _body(_tail_lines(extra.get("tails", {"skipped": True})))),
                       ("ch_tutorials", _body(_tutorial_lines(extra.get("tutorials", {"skipped": True})))),
                       ("ch_gsc", _body(_gsc_lines(gsc)))):

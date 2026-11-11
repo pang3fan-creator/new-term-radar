@@ -59,7 +59,8 @@
 |---|---|
 | `# 付费产品周边的搜索`（`sidelights.tails`） | ⑥ 收入和 ⑧ 卖家今天有名单，才有词可查 |
 | `# 教程观众在要什么`（`pains.tutorial_asks`） | 线索里出现 ⚡（高赞帖在讲一套手动流程）才有得读 |
-| `# 新名字的旁证`（`sidelights.evidence`） | 依赖和「新词表」同一批名字（`names_to_read`）。它在跑，一次几美分，不是源 |
+| `# 新名字的旁证`（`sidelights.evidence`） | **已下线**（2026-11-11，跟着新词表一起）；`config.json` 里 `sidelights.names` 设 0。见 [`parked.md`](parked.md) |
+| `# 主题`（`topic_lines`） | **已下线**（2026-11-11）：单源命中时只是重复别的章节。见 [`parked.md`](parked.md) |
 | `# 复盘`（`review.review`） | 14 天前报出的词到期才读，不用开关 |
 
 ## 五、已下线

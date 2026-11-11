@@ -32,9 +32,12 @@ SYSTEM = (
     "company or product name; or a generic word.\n"
     "- why: one short sentence, at most 12 words. Say what it does or what demand is forming. Never merely restate "
     "where it was found (\"an App Store listing\", \"featured on Product Hunt\").\n"
+    "- need: the phrase a person would type into Google for the need behind this, at most 5 words, no brand or "
+    "product name (\"ai video clipping\", \"private notes app\"). Empty string when the term is itself a brand, a "
+    "company, a person's name or a URL fragment, and when nothing here shows a need. Do not invent a phrase.\n"
     "- use: inner (a page on a site you already run), new (a new site), or watch (not yet).\n"
     "Answer with JSON only, one object per term, in the same order: "
-    "[{\"i\": 0, \"kind\": \"tool\", \"why\": \"...\", \"use\": \"inner\"}, ...]"
+    "[{\"i\": 0, \"kind\": \"tool\", \"why\": \"...\", \"need\": \"...\", \"use\": \"inner\"}, ...]"
 )
 
 
@@ -61,6 +64,7 @@ def parse(answer: str, n: int) -> dict[int, dict]:
         use = str(it.get("use") or "").strip().lower()
         out[i] = {"kind": kind if kind in KINDS else "generic",
                   "why": " ".join(str(it.get("why") or "").split())[:120],
+                  "need": " ".join(str(it.get("need") or "").split())[:60],
                   "use": use if use in USES else "watch"}
     return out
 
@@ -80,6 +84,7 @@ def by_rules(rows: list[dict]) -> None:
             "info" if INFO.search(term) else "generic")
         r.setdefault("kind", kind)
         r.setdefault("why", "")
+        r.setdefault("need", "")
         r.setdefault("use", "watch")
 
 
@@ -99,7 +104,7 @@ def annotate(rows: list[dict], setting: dict, use_model: bool = True) -> dict:
         by_rules(rows)
         return {"briefed": 0, "by_rules": len(rows), "skipped": True}
     done, error = 0, ""
-    system = SYSTEM + "\nWrite `why` in " + ("Chinese." if i18n.lang() == "zh" else "English.")
+    system = SYSTEM + "\nWrite `why` and `need` in " + ("Chinese." if i18n.lang() == "zh" else "English.")
     for start in range(0, len(rows), CHUNK):
         chunk = rows[start:start + CHUNK]
         user = json.dumps([{"i": i, "term": r["term"], "appeared": list(r.get("signals") or [])[:2],

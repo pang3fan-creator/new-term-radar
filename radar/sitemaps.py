@@ -100,4 +100,8 @@ def diff(cfg: dict, state: Path) -> dict:
         baseline += [(u, slug_text(u)) for u in (old or set())]
         snap.save(path, sorted(now))
     ratio = len(recent) / max(len(baseline), 1)
-    return {"sites": report, "terms": surges(by_source(recent), by_source(baseline), ratio, MIN_URLS, TOP)}
+    recent_by = by_source(recent)
+    terms = surges(recent_by, by_source(baseline), ratio, MIN_URLS, TOP)
+    for row in terms:                       # the pages are the evidence: the word alone says nothing
+        row["examples"] = sorted(recent_by.get(row["term"], ()))[:3]
+    return {"sites": report, "terms": terms}

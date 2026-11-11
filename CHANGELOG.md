@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **报告直接给「需求」。** `brief` 那一步现在对每个线索多写一个 `need`（一个人会去 Google 搜的说法，最多 5 个词；品牌名/公司名/URL 片段留空）。有 `need` 的条目在章节里显示成 `**ai video clipping** ← OpusClip`：需求在前，产品名作为证据在后。④ 竞品 sitemap 那章改成：sitemaps 会给每个词带上 2–3 条代表页面，`need` 为空的品牌名和页面碎片收成一行（`不是需求,只是品牌名或页面碎片:deepseek、manifold…(共 25 个)`），只有真需求才逐条列。`# 主题` 和 `# 新名字的旁证` 下线（前者单源命中时只是重复别的章节，后者依附已下线的新词表），`sidelights.names` 默认 0。原因和重启条件写进 `docs/parked.md`。
+
 - **新词表暂时下线。** `daily` 报告不再有 `# 新词表` 章节，`usecases.per_day` 默认 0，`daily` 不再跑那一步，也不再有它每天的付费查询。原因：它只从 X / HF / GitHub 爆发 / 新站 / 收入 / 新卖家六类信号里取名字，消费端信号（Product Hunt、App Store、热搜、Reddit 求助、上升搜索）进不来，选出来的必然是模型发布和开发者词；2026-11-11 18:05 那次 3 个名字花 $0.652，占当次 97.9%，5 行结果里 4 行是开发者/发布类词，剩下 1 行是 three.js 的缩写。代码 `radar/usecases.py`、`report.keyword_table()`、`python -m radar keywords` 和 MCP 工具全部保留，重启条件和步骤写在 `docs/parked.md`。报告格式方面，同一次改动不再输出该章节，其余 12 章的格式不变。
 
 ## 0.6.2 (2026-11-04)
