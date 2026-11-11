@@ -170,13 +170,19 @@ def _line(name: str, what: str, number: str, r: dict | None) -> str:
     return f"**{name}**{mark} — {what}（{tag}）" if what else f"**{name}**{mark}（{tag}）"
 
 
-def _chapter_state(source: str, b: dict[str, dict]) -> str:
-    """Why a chapter has nothing: skipped by --skip, or the source failed."""
+def _chapter_state(source: str, b: dict[str, dict], cfg: dict | None = None) -> str:
+    """Why a chapter has nothing: not read today (weekly, or off in the config), or the source failed."""
+    feeds_cfg = (cfg or {}).get("feeds") or {}
     if source in FEED_SOURCES:
         fd = b.get("feed") or {}
         if fd.get("skipped"):
             return t("src_skipped")
         name = SOURCE_KEY[source][5:].split(":")[0]
+        if cfg is not None:
+            if name not in (feeds_cfg.get("enabled") or []):
+                return t("src_off")
+            if name not in (fd.get("read") or {}) and name in (feeds_cfg.get("weekly") or []):
+                return t("src_skipped")
         return "; ".join(e for e in fd.get("errors") or [] if e.startswith(name))
     block = b.get(BLOCK[source]) or {}
     return t("src_skipped") if block.get("skipped") else (block.get("error") or "")
@@ -589,7 +595,7 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
             if len(rows) > CHAPTER_SHOWN:
                 lines.append(t("ch_more", n=len(rows) - CHAPTER_SHOWN))
         else:
-            lines.append(_chapter_state(source, b) or t("src_empty"))
+            lines.append(_chapter_state(source, b, cfg) or t("src_empty"))
     if any(_marks(r) for r in all_named):
         lines += ["", t("tags_note")]
     topics = topic_lines(cfg, lead, b, gsc)

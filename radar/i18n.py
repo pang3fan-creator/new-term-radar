@@ -175,6 +175,7 @@ T = {
     "no_breakouts": ("no breakout repos", "没有爆发仓库"), "skipped": ("skipped", "跳过"),
     "src_skipped": ("Not read today: a weekly source runs on its own day, and this one was not due.",
                     "今天没跑这个源:按周跑的源只在固定那天跑,今天不是它的日子。"),
+    "src_off": ("Not read today: this source is off in config.json.", "今天没读这个源:配置里关掉了。"),
     "newsite_h": ("### ③ New sites (registered and first indexed in the last {days} days, est. visits/mo >{etv}, ≥{kw} ranking keywords; 🆕 = first seen)",
                   "### ③ 新站(近 {days} 天注册且首次被收录、月访问估值 >{etv}、排名词 ≥{kw};🆕 = 第一次出现)"),
     "newsite_cols": ("| Domain | Registered | First indexed | Visits/mo (est.) | Ranking keywords |", "| 域名 | 注册 | 首次收录 | 访问/月(估) | 排名词 |"),
