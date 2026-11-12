@@ -1687,6 +1687,25 @@ def test_weekly_feeds_wait_for_their_day(cfg, tmp_path, monkeypatch):
     assert feeds.feeds(cfg, tmp_path, today=date(2026, 10, 14), weekly=True)["read"]["rising"] == len(cfg["feeds"]["seeds"])
 
 
+REDDIT_RSS = ('<feed xmlns="http://www.w3.org/2005/Atom">'
+              '<entry><title>I wish there was an app that tracks my cat medication</title>'
+              '<link rel="alternate" href="https://reddit.example/r/SomebodyMakeThis/1"/></entry>'
+              '<entry><title>Look at my new keyboard</title>'
+              '<link rel="alternate" href="https://reddit.example/r/SomebodyMakeThis/2"/></entry></feed>')
+
+
+def test_reddit_keeps_the_sentences_whole_and_writes_no_terms(cfg, tmp_path, monkeypatch):
+    cfg["feeds"]["enabled"] = ["reddit_asks"]
+    cfg["feeds"]["reddit_subs"], cfg["feeds"]["reddit_pause"] = ["SomebodyMakeThis"], 0
+    monkeypatch.setattr(feeds, "get", lambda url: REDDIT_RSS.encode())
+    out = feeds.feeds(cfg, tmp_path, today=date(2026, 10, 14))
+    items = out["new"]["reddit_asks"]
+    assert [i["name"] for i in items] == ["I wish there was an app that tracks my cat medication",
+                                          "Look at my new keyboard"]
+    assert items[0]["where"] == "r/SomebodyMakeThis" and items[0]["url"].endswith("/1")
+    assert not out["terms"]            # a sentence is a demand to read, not a new word to judge
+
+
 def test_money_finds_the_owners_other_sites_and_new_advertisers(cfg, tmp_path, monkeypatch):
     cfg["money"]["ad_terms"] = ["ai headshot"]
     monkeypatch.setattr(money.goanyapi, "key", lambda: "k")
@@ -2395,6 +2414,19 @@ def test_the_daily_report_lists_a_lead_under_its_platform(cfg):
     text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
                         {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
     assert "1. **private notes app** ← switchy — a new launch（AI tool · new site）" in text
+
+
+def test_the_reddit_chapter_shows_the_demand_sentence_as_read(cfg):
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    blocks["feed"] = {"read": {"reddit_asks": 1}, "errors": [], "new": {"reddit_asks": [
+        {"name": "I wish there was an app that tracks my cat medication", "url": "https://reddit.example/1",
+         "about": "", "where": "r/SomebodyMakeThis"}]}}
+    cfg["feeds"]["enabled"], cfg["feeds"]["weekly"] = ["reddit_asks"], []
+    text = report.daily(cfg, [], blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    assert "# Reddit" in text
+    assert "1. **I wish there was an app that tracks my cat medication**（r/SomebodyMakeThis）" in text
 
 
 def test_the_sitemap_chapter_lists_needs_and_puts_brand_names_in_one_line(cfg):

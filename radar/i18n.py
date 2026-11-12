@@ -149,7 +149,7 @@ T = {
     "src_appstore": ("App Store", "App Store"),
     "src_google_new": ("Google, new this week", "Google 新收录"),
     "src_tiktok": ("TikTok trending", "TikTok 热搜"),
-    "src_reddit": ("Reddit trending", "Reddit 热搜"),
+    "src_reddit": ("Reddit", "Reddit"),
     "src_rising": ("Rising searches", "上升搜索"),
     "src_revenue": ("TrustMRR revenue", "TrustMRR 收入"),
     "src_ask": ("What people ask for", "求助"),

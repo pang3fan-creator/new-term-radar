@@ -61,7 +61,7 @@ SOURCES = ("x", "sitemap", "newsite", "producthunt", "appstore", "google_new",
            "tiktok", "reddit", "rising", "revenue", "ask", "seller", "builder")
 SOURCE_KEY = {"x": "x", "sitemap": "sitemap", "newsite": "newsite",
               "producthunt": "feed:producthunt", "appstore": "feed:appstore", "google_new": "feed:google_new",
-              "tiktok": "feed:trending:tiktok", "reddit": "feed:trending:reddit", "rising": "feed:rising",
+              "tiktok": "feed:trending:tiktok", "reddit": "feed:reddit_asks", "rising": "feed:rising",
               "revenue": "revenue", "ask": "ask", "seller": "seller", "builder": "builder"}
 BLOCK = {"x": "x", "sitemap": "sitemap", "newsite": "newsite", "revenue": "revenue", "ask": "ask",
          "seller": "seller", "builder": "builder"}
@@ -129,6 +129,9 @@ def _rows(source: str, b: dict[str, dict], by_term: dict[str, dict]) -> list[tup
         where = SOURCE_KEY[source][5:].partition(":")[2]
         for i in (b.get("feed", {}).get("new") or {}).get(name) or []:
             if where and (i.get("where") or "") != where:
+                continue
+            if source == "reddit":         # the post is the demand; the reader keeps the sentence
+                out.append((i["name"], "", i.get("where") or "", None))
                 continue
             r = _match(i["name"], by_term)
             about = _cell(i.get("about") or "").replace("Discussion / Link", "").strip()
@@ -609,6 +612,9 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
                     shown = "、".join(x[0] for x in rest[:6])
                     lines.append(t("sitemap_rest", names=shown) if len(rest) <= 6 else
                                  t("sitemap_rest_more", names=shown, n=len(rest)))
+            elif source == "reddit":         # the post is already the demand: no need-word rewrite
+                for i, (name, _why, place, _lead) in enumerate(rows, 1):
+                    lines.append(f"{i}. **{name}**（{place}）")
             else:
                 for i, (name, what, number, r) in enumerate(rows, 1):     # every item the source listed
                     lines.append(f"{i}. " + _line(name, what, number, r))

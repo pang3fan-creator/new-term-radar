@@ -12,10 +12,10 @@
 |---|---|---|---|
 | `# X` | `sources.x_new` | X 账号的帖子（`x_accounts`） | $0.012 |
 | `# 竞品 sitemap` | `sitemaps.diff` | 你配的 sitemap，比对新增页面 | 0（普通 HTTP） |
-| `# Product Hunt` | `feeds.producthunt` | Product Hunt 首页 | 含在 $0.002 |
+| `# Product Hunt` | `feeds.producthunt` | Product Hunt GraphQL API 的 featured 发布（`PH_API_KEY`，没 key 退回 Atom feed） | 0（API 免费） |
 | `# App Store` | `feeds.appstore` | App Store 新上架（`app_genres`） | 含在 $0.002 |
 | `# TikTok 热搜` | `feeds.trending` | TikTok 热搜（`feeds.trending`） | 含在 $0.002 |
-| `# Reddit 热搜` | `feeds.trending` | Reddit 热搜 | 含在 $0.002 |
+| `# Reddit` | `feeds.reddit_asks` | r/SomebodyMakeThis、r/AppIdeas 的新帖 RSS（`feeds.reddit_subs`） | 0（普通 HTTP） |
 
 每周一（7 个）：
 

@@ -26,11 +26,13 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import re
 import time
+import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from . import UA, aisa, goanyapi, snap
@@ -46,7 +48,8 @@ TOOLISH = re.compile(r"(?<![a-z])(ai|app|tool|generator|filter|effect|template|p
                      r"|特效|模板|滤镜|工具|生成|剪辑|一键|智能|插件", re.I)
 NOTE = {"google_new": "note_feed_google_new"}      # a feed whose label does not fit the generic sentence
 LABEL = {"producthunt": "Product Hunt", "hn": "Show HN", "openrouter": "OpenRouter", "civitai": "Civitai", "appstore": "App Store",
-         "awesome": "awesome list", "google_new": "Google, new this week", "trending": "trending", "rising": "rising with"}
+         "awesome": "awesome list", "google_new": "Google, new this week", "trending": "trending", "rising": "rising with",
+         "reddit_asks": "Reddit"}
 
 
 def get(url: str) -> bytes:
@@ -69,7 +72,53 @@ def clean(text: str, n: int = 200) -> str:
     return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", text or "")).split())[:n]
 
 
+PH_API = "https://api.producthunt.com/v2/api/graphql"
+PH_QUERY = """
+query ($after: DateTime, $cursor: String) {
+  posts(postedAfter: $after, featured: true, first: 20, order: VOTES, after: $cursor) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { name tagline slug url votesCount commentsCount } }
+  }
+}"""
+
+
+def producthunt_api(token: str) -> list[dict]:
+    """The day's featured launches through the GraphQL API (a free developer token, read-only).
+    The Atom feed only carries a slow slice of them; the API has the whole list and its votes,
+    so the report can keep the ones that actually moved."""
+    after = (datetime.now(timezone.utc) - timedelta(hours=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    out: list[dict] = []
+    cursor = None
+    for _ in range(5):      # 20 a page: five pages take the whole 30-hour window, not just its top
+        body = json.dumps({"query": PH_QUERY, "variables": {"after": after, "cursor": cursor}}).encode()
+        req = urllib.request.Request(PH_API, data=body, headers={
+            "Authorization": f"Bearer {token}", "Content-Type": "application/json",
+            "Accept": "application/json", "User-Agent": UA})
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as res:
+            answer = json.loads(res.read())
+        posts = (answer.get("data") or {}).get("posts") or {}
+        for edge in posts.get("edges") or []:
+            n = edge["node"]
+            url = n.get("url") or f"https://www.producthunt.com/posts/{n.get('slug', '')}"
+            out.append({"key": url, "name": (n.get("name") or "")[:80], "url": url,
+                        "about": clean(n.get("tagline") or ""), "score": int(n.get("votesCount") or 0),
+                        "comments": int(n.get("commentsCount") or 0), "fresh": True})
+        page = posts.get("pageInfo") or {}
+        if not page.get("hasNextPage"):
+            break
+        cursor = page.get("endCursor")
+    return out
+
+
 def producthunt(c: dict) -> tuple[list[dict], int]:
+    token = os.environ.get("PH_API_KEY", "").strip()
+    if token:
+        try:
+            items = producthunt_api(token)
+            if items:
+                return items, 0
+        except (OSError, ValueError, KeyError, TypeError):
+            pass                        # a revoked token or a changed schema falls back to the free feed
     xml = get("https://www.producthunt.com/feed").decode("utf-8", "replace")
     out = []
     for entry in re.findall(r"<entry>(.*?)</entry>", xml, re.S):
@@ -81,6 +130,56 @@ def producthunt(c: dict) -> tuple[list[dict], int]:
             out.append({"key": link.group(1), "name": clean(title.group(1), 80), "url": link.group(1),
                         "about": clean(html.unescape(content.group(1)) if content else ""), "fresh": recent(published.group(1) if published else "")})
     return out, 0
+
+
+def _reddit_rss(sub: str, pause: float) -> str:
+    """One subreddit's newest posts as Atom. Reddit 429s a burst, so a 429 waits once."""
+    for attempt in range(2):
+        try:
+            return get(f"https://www.reddit.com/r/{sub}/new/.rss").decode("utf-8", "replace")
+        except urllib.error.HTTPError as exc:
+            if exc.code != 429 or attempt:
+                raise
+            time.sleep(pause)
+    return ""
+
+
+def reddit_asks(c: dict) -> tuple[list[dict], int]:
+    """Reddit: posts that ask for something, from the subreddits where people say what they want
+    built. Read through each subreddit's RSS because reddit.com answers bots with 403 and its
+    trending searches are the day's news, not a wish. The sentence is the demand itself, so it
+    goes to the reader whole and no term is written for the judge."""
+    out, seen = [], set()
+    for i, sub in enumerate(c["reddit_subs"]):
+        if i:
+            time.sleep(c["reddit_pause"])      # a subreddit a minute; the rate limit is per minute
+        try:
+            xml = _reddit_rss(sub, c["reddit_pause"])
+        except OSError:
+            continue                           # one subreddit down must not lose the others
+        kept = 0
+        for entry in re.findall(r"<entry>(.*?)</entry>", xml, re.S):
+            title = re.search(r"<title[^>]*>(.*?)</title>", entry, re.S)
+            link = re.search(r'<link[^>]+href="([^"]+)"', entry)
+            if not (title and link):
+                continue
+            name = clean(title.group(1), 140)
+            if name.lower() in seen:           # crossposted to both subreddits: it is one wish
+                continue
+            if _asks_for_something(name):
+                seen.add(name.lower())
+                out.append({"key": link.group(1), "name": name, "url": link.group(1), "about": "",
+                            "where": f"r/{sub}", "fresh": True})
+                kept += 1
+                if kept >= c["max_per_feed"] // 2:      # every subreddit gets a share of the chapter
+                    break
+    return out, 0
+
+
+def _asks_for_something(title: str) -> bool:
+    """A post that names a thing someone wants, not a question put to the community. A wish
+    phrased as a question ("is there an app that…") is still a wish."""
+    return not title.rstrip().endswith("?") or bool(re.search(r"is there (a|an|any) ", title, re.I))
 
 
 def show_hn(c: dict) -> tuple[list[dict], int]:
@@ -190,8 +289,9 @@ def rising(c: dict) -> tuple[list[dict], int]:
     return out, cost
 
 
-FEEDS = {"producthunt": producthunt, "hn": show_hn, "openrouter": openrouter, "civitai": civitai, "appstore": appstore,
-         "awesome": awesome, "google_new": google_new, "trending": trending, "rising": rising}
+FEEDS = {"producthunt": producthunt, "reddit_asks": reddit_asks, "hn": show_hn, "openrouter": openrouter,
+         "civitai": civitai, "appstore": appstore, "awesome": awesome, "google_new": google_new,
+         "trending": trending, "rising": rising}
 
 
 def feeds(cfg: dict, state: Path, today: date | None = None, weekly: bool = False) -> dict:
@@ -224,6 +324,8 @@ def feeds(cfg: dict, state: Path, today: date | None = None, weekly: bool = Fals
         fresh = sorted(fresh, key=lambda i: -(i.get("score") or 0))[:c["max_per_feed"]]
         out["new"][name] = fresh
         for i in fresh:
+            if name == "reddit_asks":
+                continue                # a wish sentence is for the reader, not a term to judge
             # Which platform it came from, so the report can give each its own chapter: `trending`
             # covers TikTok and Reddit, and only the item knows which.
             where = f"{name}:{i['where']}" if name == "trending" and i.get("where") else name

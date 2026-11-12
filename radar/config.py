@@ -67,12 +67,13 @@ DEFAULTS = {
                 "max_leads": 12, "visits": True, "rank_max": 350, "max_visits": 300000, "pool": 60, "model": "gpt-4.1-mini"},
     "builders": {"weekday": 0, "platforms": ["lovable", "v0", "beehiiv"], "per_platform": 100, "rank_max": 350, "pool": 40,
                  "max_leads": 12},
-    "feeds": {"enabled": ["producthunt", "hn", "openrouter", "appstore", "awesome", "google_new", "trending", "rising"],   # civitai: anime checkpoints, mostly
+    "feeds": {"enabled": ["producthunt", "reddit_asks", "hn", "openrouter", "appstore", "awesome", "google_new", "trending", "rising"],   # civitai: anime checkpoints, mostly
               "weekly": ["google_new", "rising"], "weekday": 0, "max_per_feed": 10, "hn_points": 30,
+              "reddit_subs": ["SomebodyMakeThis", "AppIdeas"], "reddit_pause": 45,
               "app_genres": [6007, 6008, 6027, 6002],      # Productivity, Photo & Video, Graphics & Design, Utilities
               "awesome": ["https://raw.githubusercontent.com/punkpeye/awesome-mcp-servers/main/README.md"],
               "google_new": ["figma.com/community/plugin", "theresanaiforthat.com/ai/", "chromewebstore.google.com/detail"],
-              "trending": ["douyin", "tiktok", "tiktok_tags", "reddit"],
+              "trending": ["douyin", "tiktok", "tiktok_tags"],
               "seeds": ["ai generator", "ai detector", "ai converter", "ai maker", "ai checker", "ai editor", "ai translator", "ai agent"]},
     "money": {"weekday": 0, "portfolio_sites": 12, "max_dr": 60, "max_sisters": 30,
               "ad_terms": ["ai ppt", "claude skills", "mcp server", "claude powerpoint"]},
