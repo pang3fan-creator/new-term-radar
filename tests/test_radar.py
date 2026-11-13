@@ -1706,6 +1706,25 @@ def test_reddit_keeps_the_sentences_whole_and_writes_no_terms(cfg, tmp_path, mon
     assert not out["terms"]            # a sentence is a demand to read, not a new word to judge
 
 
+def test_reddit_wishes_are_read_into_chinese_and_the_meaningless_are_dropped(cfg, monkeypatch):
+    items = [{"name": "An ai that gives me the cheapest supermarket", "url": "u1"},
+             {"name": "Pregunta seria", "url": "u2"},
+             {"name": "Look at my new keyboard", "url": "u3"}]
+    monkeypatch.setattr(brief.aisa, "chat", lambda model, system, user, max_tokens=0:
+                        '[{"i": 0, "zh": "想要一个能替我找到最便宜超市的 AI"}, '
+                        '{"i": 1, "drop": true}, {"i": 2}]')
+    assert brief.read_reddit(items, cfg["brief"]) == {"read": 1, "dropped": 1}
+    assert [x["url"] for x in items] == ["u1", "u3"]      # what nothing can be built on leaves the list
+    assert items[0]["zh"] == "想要一个能替我找到最便宜超市的 AI" and "zh" not in items[1]
+
+
+def test_reddit_read_keeps_the_english_when_the_model_says_nothing(cfg, monkeypatch):
+    items = [{"name": "An ai that gives me the cheapest supermarket"}]
+    monkeypatch.setattr(brief.aisa, "chat", lambda *a, **k: "not json")
+    brief.read_reddit(items, cfg["brief"])
+    assert "zh" not in items           # the report falls back to the title as posted
+
+
 def test_money_finds_the_owners_other_sites_and_new_advertisers(cfg, tmp_path, monkeypatch):
     cfg["money"]["ad_terms"] = ["ai headshot"]
     monkeypatch.setattr(money.goanyapi, "key", lambda: "k")
@@ -2421,12 +2440,17 @@ def test_the_reddit_chapter_shows_the_demand_sentence_as_read(cfg):
                                              "builder", "feed", "money")}
     blocks["feed"] = {"read": {"reddit_asks": 1}, "errors": [], "new": {"reddit_asks": [
         {"name": "I wish there was an app that tracks my cat medication", "url": "https://reddit.example/1",
-         "about": "", "where": "r/SomebodyMakeThis"}]}}
+         "about": "", "where": "r/SomebodyMakeThis", "zh": "想要一个能记录猫咪吃药的 app"}]}}
     cfg["feeds"]["enabled"], cfg["feeds"]["weekly"] = ["reddit_asks"], []
     text = report.daily(cfg, [], blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
                         {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
     assert "# Reddit" in text
     assert "1. **I wish there was an app that tracks my cat medication**（r/SomebodyMakeThis）" in text
+    assert "   → 想要一个能记录猫咪吃药的 app" in text
+    blocks["feed"]["new"]["reddit_asks"][0].pop("zh")       # a read that failed keeps the title alone
+    text = report.daily(cfg, [], blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    assert "→" not in text
 
 
 def test_the_sitemap_chapter_lists_needs_and_puts_brand_names_in_one_line(cfg):

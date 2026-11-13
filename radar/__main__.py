@@ -127,6 +127,9 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
             args.sellers or date.today().weekday() == cfg["builders"]["weekday"])),
         "feed": run(lambda: feeds.feeds(cfg, state, weekly=args.feeds), "feeds" in args.skip),
     }
+    # Reddit asks arrive as English sentences: read them into Chinese before the report is written.
+    run(lambda: brief.read_reddit((blocks.get("feed") or {}).get("new", {}).get("reddit_asks") or [],
+                                  cfg["brief"], use_model="brief" not in args.skip), "feeds" in args.skip)
     found = run(lambda: gsc.gsc_new(cfg), "gsc" in args.skip)
     lead, judged = report.leads(cfg, blocks)
     conn = store.connect(state)

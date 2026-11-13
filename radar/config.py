@@ -69,7 +69,7 @@ DEFAULTS = {
                  "max_leads": 12},
     "feeds": {"enabled": ["producthunt", "reddit_asks", "hn", "openrouter", "appstore", "awesome", "google_new", "trending", "rising"],   # civitai: anime checkpoints, mostly
               "weekly": ["google_new", "rising"], "weekday": 0, "max_per_feed": 10, "hn_points": 30,
-              "reddit_subs": ["SomebodyMakeThis", "AppIdeas"], "reddit_pause": 45,
+              "reddit_subs": ["SomebodyMakeThis", "AppIdeas"], "reddit_pause": 45, "reddit_per_sub": 12,
               "app_genres": [6007, 6008, 6027, 6002],      # Productivity, Photo & Video, Graphics & Design, Utilities
               "awesome": ["https://raw.githubusercontent.com/punkpeye/awesome-mcp-servers/main/README.md"],
               "google_new": ["figma.com/community/plugin", "theresanaiforthat.com/ai/", "chromewebstore.google.com/detail"],

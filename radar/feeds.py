@@ -163,7 +163,9 @@ def reddit_asks(c: dict) -> tuple[list[dict], int]:
             link = re.search(r'<link[^>]+href="([^"]+)"', entry)
             if not (title and link):
                 continue
-            name = clean(title.group(1), 140)
+            name = clean(title.group(1), 400)
+            if len(name) > 140:
+                name = name[:140].rstrip() + "…"    # the report shows the title as posted; say it was cut
             if name.lower() in seen:           # crossposted to both subreddits: it is one wish
                 continue
             if _asks_for_something(name):
@@ -171,7 +173,7 @@ def reddit_asks(c: dict) -> tuple[list[dict], int]:
                 out.append({"key": link.group(1), "name": name, "url": link.group(1), "about": "",
                             "where": f"r/{sub}", "fresh": True})
                 kept += 1
-                if kept >= c["max_per_feed"] // 2:      # every subreddit gets a share of the chapter
+                if kept >= c["reddit_per_sub"]:        # every subreddit gets a share of the candidates
                     break
     return out, 0
 
@@ -321,7 +323,9 @@ def feeds(cfg: dict, state: Path, today: date | None = None, weekly: bool = Fals
             fresh = [i for i in fresh if i.get("fresh")]
             if not fresh:
                 continue
-        fresh = sorted(fresh, key=lambda i: -(i.get("score") or 0))[:c["max_per_feed"]]
+        cap = c["max_per_feed"] if name != "reddit_asks" else \
+            len(c["reddit_subs"]) * c["reddit_per_sub"]      # the reading step drops what has no demand
+        fresh = sorted(fresh, key=lambda i: -(i.get("score") or 0))[:cap]
         out["new"][name] = fresh
         for i in fresh:
             if name == "reddit_asks":

@@ -131,7 +131,7 @@ def _rows(source: str, b: dict[str, dict], by_term: dict[str, dict]) -> list[tup
             if where and (i.get("where") or "") != where:
                 continue
             if source == "reddit":         # the post is the demand; the reader keeps the sentence
-                out.append((i["name"], "", i.get("where") or "", None))
+                out.append((i["name"], "", i.get("where") or "", i))
                 continue
             r = _match(i["name"], by_term)
             about = _cell(i.get("about") or "").replace("Discussion / Link", "").strip()
@@ -612,9 +612,11 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
                     shown = "、".join(x[0] for x in rest[:6])
                     lines.append(t("sitemap_rest", names=shown) if len(rest) <= 6 else
                                  t("sitemap_rest_more", names=shown, n=len(rest)))
-            elif source == "reddit":         # the post is already the demand: no need-word rewrite
-                for i, (name, _why, place, _lead) in enumerate(rows, 1):
+            elif source == "reddit":         # the title as posted, then what it asks for
+                for i, (name, _why, place, item) in enumerate(rows, 1):
                     lines.append(f"{i}. **{name}**（{place}）")
+                    if item and item.get("zh"):
+                        lines.append(f"   → {item['zh']}")
             else:
                 for i, (name, what, number, r) in enumerate(rows, 1):     # every item the source listed
                     lines.append(f"{i}. " + _line(name, what, number, r))
