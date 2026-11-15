@@ -45,9 +45,12 @@ def leads(cfg: dict, blocks: dict[str, dict]) -> tuple[list[dict], dict]:
 
 
 def named(cfg: dict, lead: list[dict]) -> list[dict]:
-    """Without the judge's score (no key, a failed call) every term counts; with it, only names."""
+    """Without the judge's score (no key, a failed call) every term counts; with it, only names.
+    A name in `known_terms`, or one the brief calls established — a tool the world has had for
+    years — is not a lead: it is what you already have, not what you just found."""
     cut = cfg["judge"]["min_score"]
-    return [r for r in lead if r.get("named", 1.0) >= cut]
+    return [r for r in lead
+            if r.get("named", 1.0) >= cut and not r.get("established") and not r.get("known")]
 
 
 def to_record(cfg: dict, lead: list[dict]) -> list[dict]:
@@ -98,11 +101,14 @@ def _match(term: str, by_term: dict[str, dict]) -> dict:
     return None
 
 
-def _rows(source: str, b: dict[str, dict], by_term: dict[str, dict]) -> list[tuple[str, str, str, dict]]:
+def _rows(source: str, b: dict[str, dict], by_term: dict[str, dict],
+          labels: dict[str, dict] | None = None) -> list[tuple[str, str, str, dict]]:
     """Every item this source produced today: (name, what it is, the source's own number, its lead).
-
-    The chapters list what the source listed, not only what the judge called a name: a TikTok
-    trend that reads like a sentence is still what TikTok had today, and the reader decides."""
+    `by_term` decides which leads are reported; `labels` (every lead, kept or not) only names a feed
+    item, so a launch the brief called established still reads in Chinese in its own chapter. The
+    chapters list what the source listed, not only what the judge called a name: a TikTok trend that
+    reads like a sentence is still what TikTok had today, and the reader decides."""
+    labels = by_term if labels is None else labels
     out = []
     if source == "newsite":
         for s in b.get("newsite", {}).get("sites") or []:
@@ -133,7 +139,7 @@ def _rows(source: str, b: dict[str, dict], by_term: dict[str, dict]) -> list[tup
             if source == "reddit":         # the post is the demand; the reader keeps the sentence
                 out.append((i["name"], "", i.get("where") or "", i))
                 continue
-            r = _match(i["name"], by_term)
+            r = _match(i["name"], labels)
             about = _cell(i.get("about") or "").replace("Discussion / Link", "").strip()
             place = i.get("where") or ""
             fallback = (t("why_trending") if name == "trending" else t("why_rising", seed=place) if name == "rising"
@@ -580,7 +586,8 @@ def _minutes(seconds: int) -> str:
 def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict, summ: dict, extra: dict[str, dict]) -> str:
     all_named = named(cfg, lead)
     by_term = {r["term"]: r for r in all_named}
-    rows_by = {s: _rows(s, b, by_term) for s in SOURCES}       # one read per source: the chapters and the count agree
+    labels_by = {r["term"]: r for r in lead}             # every label, for naming what a feed listed
+    rows_by = {s: _rows(s, b, by_term, labels_by) for s in SOURCES}   # one read per source: the chapters agree
     read = [s for s in SOURCES if not _not_read_today(s, b, cfg)]
     lines = [t("title"), "", t("overview", words=len(all_named), items=sum(len(v) for v in rows_by.values()),
                                sources=len([s for s in read if rows_by[s]]), total=len(read),
@@ -634,7 +641,7 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
             lines += ["", f"# {t(key)}", ""] + body
     lines += ["", f"# {t('ch_review')}"] + _body(_review_lines(cfg, rev, summ))
     lines += ["", f"# {t('ch_status')}"] + _body(_status_lines(b, extra))
-    rest = [r for r in lead if r not in all_named]
+    rest = [r for r in lead if r not in all_named and not r.get("established") and not r.get("known")]
     if rest:
         lines.append(t("st_rest", n=len(rest)))
     lines.append(t("cost", cost=_cost(b["x"], rev, b.get("newsite", {}), b.get("ask", {}), b.get("seller", {}), extra.get("usecases", {}),

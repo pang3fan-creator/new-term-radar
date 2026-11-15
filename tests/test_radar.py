@@ -315,7 +315,7 @@ def test_leads_merge_a_term_seen_by_two_signals(cfg, monkeypatch):
     assert rows[1]["signals"] == ["③ sitemaps: 3 places (×4.0)"]
 
 
-def test_names_lead_and_known_terms_are_not_recorded(cfg, monkeypatch):
+def test_names_lead_and_known_terms_are_neither_reported_nor_recorded(cfg, monkeypatch):
     cfg["known_terms"] = ["Remotion"]
 
     def score(rows, model):
@@ -325,7 +325,7 @@ def test_names_lead_and_known_terms_are_not_recorded(cfg, monkeypatch):
     monkeypatch.setattr(report.judge, "score", score)
     blocks = {"sitemap": {"terms": [{"term": t, "recent": 3, "lift": 2.0} for t in ("dashboard", "remotion skill", "hyperframes")]}}
     rows, _ = report.leads(cfg, blocks)
-    assert [r["term"] for r in report.named(cfg, rows)] == ["hyperframes", "remotion skill"]
+    assert [r["term"] for r in report.named(cfg, rows)] == ["hyperframes"]
     assert [r["term"] for r in report.to_record(cfg, rows)] == ["hyperframes"]
 
 
@@ -2514,6 +2514,43 @@ def test_brief_takes_the_models_labels_and_the_rules_fill_the_rest(monkeypatch):
     assert rows[0]["kind"] == "brand" and rows[0]["why"] == "a launch" and rows[0]["use"] == "new"
     assert rows[1]["kind"] == "tool" and rows[1]["use"] == "watch"      # the rules fill what the model skipped
     assert out["briefed"] == 1
+
+
+def test_brief_calls_a_longstanding_tool_established(monkeypatch):
+    monkeypatch.setattr(brief.aisa, "chat", lambda model, system, user, max_tokens=1500: json.dumps([
+        {"i": 0, "kind": "tool", "why": "records the screen", "need": "", "use": "watch", "established": True},
+        {"i": 1, "kind": "tool", "why": "a new agent benchmark", "need": "ai benchmark", "use": "new"}]))
+    rows = [{"term": "obs"}, {"term": "satbench"}]
+    brief.annotate(rows, {"enabled": True, "model": "m"})
+    assert rows[0]["established"] is True and not rows[1]["established"]
+
+
+def test_the_report_leaves_out_a_name_the_brief_calls_established(cfg):
+    lead = [{"term": "obs", "kinds": ["x"], "signals": ["X 1 个账号"], "examples": [], "variants": [], "posts": [],
+             "named": 0.9, "known": "", "format": "text", "kind": "tool", "why": "records the screen", "use": "watch",
+             "established": True},
+            {"term": "satbench", "kinds": ["x"], "signals": ["X 1 个账号"], "examples": [], "variants": [], "posts": [],
+             "named": 0.9, "known": "", "format": "text", "kind": "tool", "why": "a new agent benchmark", "use": "new"}]
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    blocks["x"] = {"terms": [], "accounts": 1, "answered": 1, "posts": 1, "cost_micros": 0}
+    text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    assert "satbench" in text and "obs" not in text
+    assert "judged common" not in text      # nor is it counted as one more ordinary word
+
+
+def test_a_known_term_never_reaches_the_report(cfg):
+    lead = [{"term": "obs studio", "kinds": ["x"], "signals": ["X"], "examples": [], "variants": [], "posts": [],
+             "named": 0.9, "known": "obs", "format": "text", "kind": "tool", "why": "records the screen", "use": "watch"},
+            {"term": "satbench", "kinds": ["x"], "signals": ["X"], "examples": [], "variants": [], "posts": [],
+             "named": 0.9, "known": "", "format": "text", "kind": "tool", "why": "a new agent benchmark", "use": "new"}]
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    blocks["x"] = {"terms": [], "accounts": 1, "answered": 1, "posts": 1, "cost_micros": 0}
+    text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    assert "satbench" in text and "obs studio" not in text
 
 
 def test_brief_asks_for_why_in_the_reports_language(monkeypatch):

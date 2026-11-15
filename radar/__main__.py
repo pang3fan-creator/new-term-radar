@@ -133,9 +133,11 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
     found = run(lambda: gsc.gsc_new(cfg), "gsc" in args.skip)
     lead, judged = report.leads(cfg, blocks)
     conn = store.connect(state)
-    extra = {"judge": judged, "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))}),
+    # The brief runs before the record: a name it calls established never reaches the archive either.
+    extra = {"judge": judged,
              "brief": run(lambda: brief.annotate(report.named(cfg, lead), cfg["brief"],
-                                                 use_model="brief" not in args.skip))}
+                                                 use_model="brief" not in args.skip)),
+             "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))})}
     # What the viewers of a widely shared walkthrough ask for: the one-click tool behind a ⚡ lead.
     extra["tutorials"] = run(lambda: pains.tutorial_asks(cfg, report.named(cfg, lead)),
                              "tutorials" in args.skip or not cfg["tutorials"]["max_leads"])

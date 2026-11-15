@@ -36,8 +36,11 @@ SYSTEM = (
     "product name (\"ai video clipping\", \"private notes app\"). Empty string when the term is itself a brand, a "
     "company, a person's name or a URL fragment, and when nothing here shows a need. Do not invent a phrase.\n"
     "- use: inner (a page on a site you already run), new (a new site), or watch (not yet).\n"
+    "- established: true when this is a product or company the world has known for years (OBS, Excel, Photoshop, "
+    "Stripe, Notion, a hardware brand); false for a name that appeared recently. When unsure, false.\n"
     "Answer with JSON only, one object per term, in the same order: "
-    "[{\"i\": 0, \"kind\": \"tool\", \"why\": \"...\", \"need\": \"...\", \"use\": \"inner\"}, ...]"
+    "[{\"i\": 0, \"kind\": \"tool\", \"why\": \"...\", \"need\": \"...\", \"use\": \"inner\", "
+    "\"established\": false}, ...]"
 )
 
 
@@ -70,7 +73,8 @@ def parse(answer: str, n: int) -> dict[int, dict]:
         out[i] = {"kind": kind if kind in KINDS else "generic",
                   "why": " ".join(str(it.get("why") or "").split())[:120],
                   "need": " ".join(str(it.get("need") or "").split())[:60],
-                  "use": use if use in USES else "watch"}
+                  "use": use if use in USES else "watch",
+                  "established": it.get("established") is True}
     return out
 
 
