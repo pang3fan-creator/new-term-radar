@@ -32,6 +32,9 @@
 | 常量 | 值 | 位置 | 作用 | 坑 |
 |---|---|---|---|---|
 | `RISE_FACTOR`, `RISE_MIN` | `2.0`, `10` | `radar/review.py:27` | 峰值要超过自身基线 **2 倍**且高出 **10 点**才算「涨了」 | 温和上涨会被判成 miss，命中率偏低 |
+| `EARLY_DAYS` | `1` | `radar/review.py:37` | 提前 1 天以上才算 early，否则记 late | 当天报出、第二天才涨的词会算 late |
+| `MAX_REVIEW_AGE_DAYS` | `90` | `radar/store.py:81` | 超过 90 天的线索不再排进复盘队列（记 no_data） | 停跑三个月以上的旧线索会被判 no_data，不是 miss |
+| `RECORDING_START` | `2026-11-07` | `radar/review.py:39` | 这个 fork 第一天记录线索的日期；那天的 hit 记 `recording_start`，不算提前 | 换机器/重建 state 时改这里 |
 | `BEFORE_DAYS`, `MAX_VARIANTS` | `30`, `3` | `radar/review.py:25-26` | 基线看 30 天；每个词最多查 3 个写法 | 第 4 个写法不参与复盘 |
 | `MIN_PEAK`, `MIN_MONTHS` | `50`, `7` | `radar/curve.py:26-28` | 最高月不到 50 次搜索就写「搜索太少」；不足 7 个月不画走势 | 小词读不出曲线 |
 | `CALIBRATE_MIN` | `1000` | `radar/usecases.py:79` | 只有月搜 ≥1000 的词参与基准词校准 | 词太小不参与，日搜估计的锚点会变 |

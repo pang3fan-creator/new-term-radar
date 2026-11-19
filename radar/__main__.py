@@ -50,8 +50,8 @@ from datetime import date
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import asks, breakout, brief, config, feeds, gsc, money, new_sites, notify, pains, report, review, revenue, seller_history, sellers, \
-    sidelights, sitemaps, sources, store, usecases
+from . import aisa, asks, breakout, brief, config, feeds, gsc, money, new_sites, notify, pains, report, review, revenue, \
+    seller_history, sellers, sidelights, sitemaps, sources, store, usecases
 from . import i18n
 from .i18n import t
 
@@ -130,6 +130,7 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
     # Reddit asks arrive as English sentences: read them into Chinese before the report is written.
     run(lambda: brief.read_reddit((blocks.get("feed") or {}).get("new", {}).get("reddit_asks") or [],
                                   cfg["brief"], use_model="brief" not in args.skip), "feeds" in args.skip)
+    reddit_spent = aisa.take_chat_cost()      # the reading's tokens, before the judge's own that follow
     found = run(lambda: gsc.gsc_new(cfg), "gsc" in args.skip)
     lead, judged = report.leads(cfg, blocks)
     conn = store.connect(state)
@@ -138,6 +139,8 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
              "brief": run(lambda: brief.annotate(report.named(cfg, lead), cfg["brief"],
                                                  use_model="brief" not in args.skip)),
              "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))})}
+    # The chat calls are billed apart from the data APIs: the judge and the brief take their own tokens.
+    extra["brief"]["cost_micros"] = reddit_spent + aisa.take_chat_cost()
     # What the viewers of a widely shared walkthrough ask for: the one-click tool behind a ⚡ lead.
     extra["tutorials"] = run(lambda: pains.tutorial_asks(cfg, report.named(cfg, lead)),
                              "tutorials" in args.skip or not cfg["tutorials"]["max_leads"])

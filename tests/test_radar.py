@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from radar import __main__ as cli
-from radar import aisa, breakout, brief, config, feeds, gsc, i18n, judge, new_sites, notify, report, review, sitemaps, store
+from radar import ai_answers, aisa, asks, breakout, brief, competition, config, feeds, gsc, i18n, judge, new_sites, notify, report, review, sellers, sitemaps, store
 from radar import page_age as _page_age
 from radar.sources import base_name, novel_names
 from radar.terms import names
@@ -909,6 +909,9 @@ def test_mcp_tools_say_why_they_failed(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "kept_leads", read_only)
     with pytest.raises(mcp_server.ToolError, match="Read-only file system.*RADAR_STATE sets the folder"):
         mcp_server.recent_leads(7)
+    import asyncio
+    with pytest.raises(mcp_server.ToolError, match='command must be "sources" or "daily"'):
+        asyncio.run(mcp_server.run_radar("weekly"))
 
 
 def test_skills_have_a_name_and_a_description():
@@ -2670,3 +2673,125 @@ def test_reports_window_keeps_only_the_last_days(tmp_path):
     store.save_report(conn, "daily", 0, "old", today=date(2026, 10, 31))
     store.save_report(conn, "daily", 0, "newer", today=date(2026, 11, 8))
     assert [r["chars"] for r in store.reports(conn, days=7, today=date(2026, 11, 8))] == [5]
+
+
+def test_review_rose_does_not_pick_a_baseline_blip_before_first_seen(monkeypatch):
+    import pytest
+    import radar
+    assert radar.__version__ in radar.UA
+    # baseline has a blip (30 on 09-20, above line=28.75) before first_seen (09-25), then real rise (60, 100) on 09-28..29
+    pts = _series([0, 30, 0, 0, 0, 0, 0, 0, 0, 60, 100, 80, 0, 0])
+    got = review.rose(pts, SEEN)
+    assert got["rose"] and got["first_rise"] == "2026-09-28" and got["earliest_rise"] == "2026-09-20"
+    v, lead = review.verdict({"v": got}, SEEN)
+    assert v == "hit" and lead == 3
+    assert review.unclear(date(2026, 11, 7), date(2026, 10, 5)) == "recording_start"   # this fork's first recording day
+    assert review.unclear(SEEN, date(2026, 9, 20), date(2026, 9, 24)) == "pre_existing"
+    assert review.unclear(SEEN, date(2026, 9, 25), date(2026, 9, 24)) == ""
+    t = review.tally([(["breakout"], "hit", 3, False), (["breakout"], "hit", -2, True), (["breakout"], "miss", None, False)])
+    assert t["breakout"] == {"checked": 3, "early": 1, "late": 0, "unclear": 1, "miss": 1, "no_data": 0, "median_lead": 3}
+
+    monkeypatch.setenv("RADAR_EMAIL_TO", "me@example.com")
+    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+    monkeypatch.delenv("EMAIL_FROM", raising=False)
+    with pytest.raises(SystemExit, match="mail requires RESEND_API_KEY, EMAIL_FROM"):
+        notify.send("subject", "body")
+
+
+def test_breakout_shown_keeps_new_repos_even_below_top_fifteen():
+    rows = [{"repo": f"old/{i}", "velocity": 1000 - i, "delta": None, "new": False} for i in range(15)] + [
+        {"repo": "new/gem", "velocity": 250, "delta": None, "new": True}]
+    kept = breakout.shown(rows)
+    assert len(kept) == 15 and any(r["repo"] == "new/gem" for r in kept)
+
+
+def test_kgr_and_ai_answers_multi_run_distribution(cfg, monkeypatch):
+    assert competition.kgr_of(20, 200) == (0.1, "great")
+    assert competition.kgr_of(150, 200) == (0.75, "watch")
+    assert competition.kgr_of(300, 200) == (1.5, "skip")
+    assert competition.kgr_of(10, 0) == (None, None)
+    comp = {"verdict": "open", "built": 20, "kgr": 0.1, "kgr_band": "great"}
+    assert "KGR 0.1 (<0.25)" in report._page_one(comp)
+
+    cfg["ai_answers"].update(enabled=True, engines=["chatgpt"], max_rows=1, runs=3)
+    replies = iter([
+        ({"brand_entities": [{"markdown": "ToolA"}, {"markdown": "ToolB"}], "sources": [{"domain": "a.com"}]}, 4000),
+        ({"brand_entities": [{"markdown": "ToolB"}], "sources": [{"domain": "b.com"}]}, 4000),
+        ({"brand_entities": [], "sources": []}, 4000),
+    ])
+    monkeypatch.setattr(ai_answers.aisa, "rest", lambda path, task: next(replies))
+    rows = [{"phrase": "convert slides to notes", "posts": [], "subreddits": []}]
+    cost, errors = ai_answers.assess(rows, cfg)
+    ai = rows[0]["ai"]
+    assert cost == 12000 and errors == [] and ai["runs"] == 3
+    assert ai["by"]["chatgpt"]["names"] == ["ToolB", "ToolA"] and ai["first_pick"] == {"chatgpt": "ToolB"}
+    assert ai["distribution"]["chatgpt"]["counts"] == {"ToolA": 1, "ToolB": 2} and not ai["gap"]
+    assert "ToolB (2/3)" in report._ai_cell(ai) and "ToolA (1/3)" in report._ai_cell(ai)
+    rendered = "\n".join(report._ai_lines(rows, cfg))
+    assert "ToolB (2/3), ToolA (1/3)" in rendered and "a.com (1/3)" in rendered
+
+
+
+def test_chat_cost_due_window_x_age_missing_visits_and_fan_out_modifiers(cfg, tmp_path, monkeypatch):
+    from radar import aisa
+    # 1. aisa.estimate_chat_cost & take_chat_cost
+    aisa.take_chat_cost()
+    assert aisa.estimate_chat_cost("claude-sonnet-4-6", {"usage": {"prompt_tokens": 1000, "completion_tokens": 200}}) == 6000
+    assert aisa.estimate_chat_cost("gpt-4.1-mini", {}, prompt_chars=400, answer_chars=100) > 0
+    monkeypatch.setattr(aisa, "_post", lambda url, body, timeout: {
+        "choices": [{"message": {"content": "ok"}}],
+        "usage": {"prompt_tokens": 500, "completion_tokens": 100},
+    })
+    assert aisa.chat("gpt-4.1-mini", "sys", "usr") == "ok"
+    assert aisa.take_chat_cost() == int(round(500 * 0.4 + 100 * 1.6))
+    assert aisa.take_chat_cost() == 0
+
+    # 2. store.due max_age_days prevents permanently stuck ancient leads from blocking the queue
+    conn = store.connect(tmp_path)
+    store.record(conn, [{"term": "ancient_stuck", "kinds": ["x"], "signals": ["s"]}], today=date(2026, 5, 1))
+    store.record(conn, [{"term": "fresh_due", "kinds": ["x"], "signals": ["s"]}], today=date(2026, 10, 1))
+    due_terms = [t for t, _, _ in store.due(conn, date(2026, 10, 20), after_days=14, limit=5)]
+    assert due_terms == ["fresh_due"]
+
+    # 3. asks.collect drops X posts whose date failed to parse (created == 0.0)
+    monkeypatch.setattr(asks.social, "reddit", lambda q, **k: ([], 0))
+    now_ts = datetime.now(timezone.utc).timestamp()
+    monkeypatch.setitem(asks.EXTRA, "x", lambda c: ([
+        {"id": "x:bad", "title": "old unparseable tweet", "text": "", "subreddit": "x", "score": 50, "url": "", "created": 0.0},
+        {"id": "x:good", "title": "recent tweet", "text": "", "subreddit": "x", "score": 50, "url": "", "created": now_ts - 3600},
+    ], 3000))
+    c_asks = dict(cfg["asks"], patterns=[], extra_sources=["x"])
+    kept_posts, _, _ = asks.collect(c_asks)
+    assert [p["id"] for p in kept_posts] == ["x:good"]
+
+    # 4. sellers drops sites whose visits lookup failed when GOANYAPI_API_KEY is configured
+    monkeypatch.setenv("GOANYAPI_API_KEY", "k")
+    cfg["sellers"]["platforms"] = ["stripe"]
+    rows = [("small-indie.app", "https://buy.stripe.com/a"), ("giant-failed.com", "https://buy.stripe.com/b")]
+    def seller_call(calls):
+        if calls[0]["tool"] == sellers.DOMAINS:
+            return _sites([d for d, _ in rows]), 27600
+        return _backlinks(rows), 27600
+    monkeypatch.setattr(sellers.aisa, "call", seller_call)
+    monkeypatch.setattr(sellers, "page_words", lambda host: ("Indie AI Tool", "automate tasks"))
+    monkeypatch.setattr(sellers.aisa, "chat", lambda model, system, user, max_tokens=1500: '[{"i": 0, "kind": "ai"}, {"i": 1, "kind": "ai"}]')
+    monkeypatch.setattr(sellers, "visits", lambda hosts: ({"small-indie.app": {"visits": 1200}}, 3000))
+    got_sellers = sellers.sellers(cfg, tmp_path / "sellers_state")
+    assert [s["host"] for s in got_sellers["sellers"]] == ["small-indie.app"]
+
+    # 5. ai_answers fan-out query modifier extraction & report rendering
+    cfg["ai_answers"].update(enabled=True, engines=["chatgpt"], max_rows=1, runs=2)
+    fan_replies = iter([
+        ({"brand_entities": [{"markdown": "ToolA"}], "sources": [{"domain": "a.com"}],
+          "fan_out_queries": ["best convert slides to notes github 2026", "convert slides to notes free comparison"]}, 4000),
+        ({"brand_entities": [{"markdown": "ToolA"}], "sources": [{"domain": "a.com"}],
+          "fan_out_queries": ["convert slides to notes github open source 2026"]}, 4000),
+    ])
+    monkeypatch.setattr(ai_answers.aisa, "rest", lambda path, task: next(fan_replies))
+    job_rows = [{"phrase": "convert slides to notes", "posts": [], "subreddits": []}]
+    ai_answers.assess(job_rows, cfg)
+    ai = job_rows[0]["ai"]
+    mods = {m["token"]: m["count"] for m in ai.get("fan_out_modifiers") or []}
+    assert mods.get("github") == 2 and mods.get("2026") == 2
+    ai_text = "\n".join(report._ai_lines(job_rows, cfg))
+    assert "fan-out modifiers: 2026 (2), github (2)" in ai_text

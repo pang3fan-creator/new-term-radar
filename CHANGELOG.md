@@ -4,7 +4,29 @@
 
 - **报告直接给「需求」。** `brief` 那一步现在对每个线索多写一个 `need`（一个人会去 Google 搜的说法，最多 5 个词；品牌名/公司名/URL 片段留空）。有 `need` 的条目在章节里显示成 `**ai video clipping** ← OpusClip`：需求在前，产品名作为证据在后。④ 竞品 sitemap 那章改成：sitemaps 会给每个词带上 2–3 条代表页面，`need` 为空的品牌名和页面碎片收成一行（`不是需求,只是品牌名或页面碎片:deepseek、manifold…(共 25 个)`），只有真需求才逐条列。`# 主题` 和 `# 新名字的旁证` 下线（前者单源命中时只是重复别的章节，后者依附已下线的新词表），`sidelights.names` 默认 0。原因和重启条件写进 `docs/parked.md`。
 
+- **合入上游两个提交（2026-11-16 / 11-19）。** 复盘：`rose()` 只看报出之后的窗口，报告前的小波峰不会再算出负的提前天数；超过 90 天的线索不再堵着复盘队列；Trends 一直拿不到数据的 14 天后记 `no_data`；`RECORDING_START` 改成我们自己的第一天（2026-11-07）。关键词表加 `KGR`（已有页面 / 月搜索量）；AI 答案支持 `first_pick` 和 `runs` 多次取样；爆发能记仓库创建日、新冒头的排在老仓库前面，并支持影子查询；痛点多了 App Store 低星评论（苹果公开 RSS）。**花费那行改了算法**：模型对话（名字判断、关键词说明、Reddit 解读、关键词表、AI 答案）的 token 费用现在按估算计入本次花费，不再写「另计」。
+
 - **新词表暂时下线。** `daily` 报告不再有 `# 新词表` 章节，`usecases.per_day` 默认 0，`daily` 不再跑那一步，也不再有它每天的付费查询。原因：它只从 X / HF / GitHub 爆发 / 新站 / 收入 / 新卖家六类信号里取名字，消费端信号（Product Hunt、App Store、热搜、Reddit 求助、上升搜索）进不来，选出来的必然是模型发布和开发者词；2026-11-11 18:05 那次 3 个名字花 $0.652，占当次 97.9%，5 行结果里 4 行是开发者/发布类词，剩下 1 行是 three.js 的缩写。代码 `radar/usecases.py`、`report.keyword_table()`、`python -m radar keywords` 和 MCP 工具全部保留，重启条件和步骤写在 `docs/parked.md`。报告格式方面，同一次改动不再输出该章节，其余 12 章的格式不变。
+
+- **⑤ Review**: `rose()` now scans `first_rise` starting from `first_seen` (`after_pts`) rather than across the whole
+  window including the pre-report baseline, fixing negative `lead_days` when a variant had a spike before it was
+  reported. Synced the October 27 retro rules into `review.py`: pre-existing terms (`born_day < 2026-10-03 - 14d` or
+  baseline `>= 25`) are marked `unclear` (`pre_existing` or `high_baseline`) and excluded from the hit-rate denominator;
+  multi-source attribution tracks `first_source` vs `all_sources`.
+- **② GitHub breakout**: `breakouts()` records each repo's `born` date (`created_at[:10]`), `shown()` preserves all
+  newly emerged breakouts (`is_new`) before filling the top-15 display slice with older repos, and `breakouts()` supports
+  optional shadow queries (`young_days`/`young_min_stars` for 3-day young repos and `late_days`/`late_min_stars` for
+  older repos breaking out now).
+- **Keyword table (`KGR`)**: `competition.py` computes `kgr_of(built, volume)` (`pages built / monthly searches`:
+  `< 0.25` great, `<= 1.0` watch, `> 1.0` skip) and shows `KGR` in the `Page one` column when GoAnyAPI `pages_built`
+  and monthly volume are present.
+- **⑦ AI answers multi-run distribution & first pick**: `ai_answers.py` records `first_pick` (the first tool named) and
+  supports `"runs": N` (`N >= 2`) to sample each engine multiple times, aggregating tool counts, cited-site counts,
+  first-pick counts and empty-run `gap` rate (`>= 80%` empty runs).
+- **Fixes**: `radar.__init__.UA` now uses `__version__`; `notify.send()` raises a clear `SystemExit` when
+  `RESEND_API_KEY` or `EMAIL_FROM` is missing instead of `KeyError`; `mcp_server.run_radar()` raises `ToolError` on an
+  invalid `command`; `pains` report and docs now match the four sources read (Chrome Web Store, App Store, Reddit and
+  YouTube comments); cost summary notes `AIsa + GoAnyAPI`.
 
 ## 0.6.2 (2026-11-04)
 
