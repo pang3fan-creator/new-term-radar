@@ -2895,3 +2895,18 @@ def test_a_paid_search_answers_the_same_query_again_when_it_comes_back_empty(cfg
     monkeypatch.setattr(feeds.time, "sleep", lambda s: None)
     got, cost = feeds.google_new(cfg["feeds"])
     assert [i["name"] for i in got] == ["A tool"] and cost == 20000
+
+
+def test_the_paid_site_signals_ask_less_outside_their_weekly_day(cfg):
+    cfg["sellers"]["weekday"] = 0            # conftest turns the weekly signals off; this test wants their day
+    cfg["sellers"]["platforms"] = ["stripe", "polar", "dodo"]
+    cfg["sellers"]["daily_platforms"] = ["dodo", "polar"]
+    cfg["builders"]["platforms"] = ["lovable", "v0"]
+    cfg["builders"]["daily_platforms"] = ["lovable"]
+    wed = cli._daily_platforms(cfg, date(2026, 11, 18))
+    assert wed["sellers"]["platforms"] == ["dodo", "polar"] and wed["builders"]["platforms"] == ["lovable"]
+    assert cfg["sellers"]["platforms"] == ["stripe", "polar", "dodo"]        # the loaded config is not changed
+    mon = cli._daily_platforms(cfg, date(2026, 11, 23))                      # the weekly run still asks them all
+    assert mon["sellers"]["platforms"] == ["stripe", "polar", "dodo"] and mon["builders"]["platforms"] == ["lovable", "v0"]
+    del cfg["sellers"]["daily_platforms"]
+    assert cli._daily_platforms(cfg, date(2026, 11, 18))["sellers"]["platforms"] == ["stripe", "polar", "dodo"]

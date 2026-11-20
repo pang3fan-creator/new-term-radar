@@ -6,30 +6,34 @@
 
 ## 一、报告里在跑的 13 个
 
-每天（6 个）：
+每天（11 个）：
 
 | 报告章节 | 代码 | 数据来自 | 一次花费 |
 |---|---|---|---|
-| `# X` | `sources.x_new` | X 账号的帖子（`x_accounts`） | $0.012 |
+| `# X` | `sources.x_new` | X 账号的帖子（`x_accounts`） | $0.021 |
 | `# 竞品 sitemap` | `sitemaps.diff` | 你配的 sitemap，比对新增页面 | 0（普通 HTTP） |
 | `# Product Hunt` | `feeds.producthunt` | Product Hunt GraphQL API 的 featured 发布（`PH_API_KEY`，没 key 退回 Atom feed） | 0（API 免费） |
-| `# App Store` | `feeds.appstore` | App Store 新上架（`app_genres`） | 含在 $0.002 |
-| `# TikTok 热搜` | `feeds.trending` | TikTok 热搜（`feeds.trending`） | 含在 $0.002 |
-| `# Reddit` | `feeds.reddit_asks` | r/SomebodyMakeThis、r/AppIdeas 的新帖 RSS（`feeds.reddit_subs`） | 0（普通 HTTP） |
+| `# App Store` | `feeds.appstore` | App Store 新上架（`app_genres`） | 0（苹果公开 RSS） |
+| `# TikTok 热搜` | `feeds.trending` | TikTok 热搜（`feeds.trending`） | 含在 $0.003 |
+| `# Reddit` | `feeds.reddit_asks` | r/SomebodyMakeThis、r/AppIdeas 的新帖 RSS（`feeds.reddit_subs`） | 0（普通 HTTP，中文解读约 $0.002） |
+| `# Google 新收录` | `feeds.google_new` | Figma 社区 / TAAFT / Chrome 商店 | $0.040 |
+| `# TrustMRR 收入` | `revenue.products` | TrustMRR API | 0（免费 key） |
+| `# 求助` | `asks.asks` | Reddit 搜索「找工具」的帖 | $0.190 |
+| `# 收款链接` | `sellers.sellers` | 花钱挂链接的站（`sellers.daily_platforms`：dodo、polar） | $0.121 |
+| `# 建站作品` | `sellers.builders` | 刚用 Lovable 建的站（`builders.daily_platforms`） | $0.055 |
 
-每周一（7 个）：
+每周一多跑（2 个），并且「收款链接」「建站作品」这一天天改用全量平台：
 
 | 报告章节 | 代码 | 数据来自 | 一次花费 |
 |---|---|---|---|
-| `# 新站` | `new_sites.new_sites` | DataForSEO 域名库（`new_sites.queries`） | $0.409 |
-| `# Google 新收录` | `feeds.google_new` | Figma 社区 / TAAFT / Chrome 商店 | 含在 $0.090 |
-| `# 上升搜索` | `feeds.rising` | Trends 上升搜索（按 `feeds.seeds`） | 含在 $0.090 |
-| `# TrustMRR 收入` | `revenue.products` | TrustMRR API | 0（免费 key） |
-| `# 求助` | `asks.asks` | Reddit 搜索「找工具」的帖 | $0.150 |
-| `# 收款链接` | `sellers.sellers` | Stripe / Polar / Gumroad 等新卖家 | $0.482 |
-| `# 建站作品` | `sellers.builders` | v0 / beehiiv 刚建的站 | $0.166 |
+| `# 新站` | `new_sites.new_sites` | DataForSEO 域名库（`new_sites.queries`） | $0.306 |
+| `# 上升搜索` | `feeds.rising` | Trends 上升搜索（按 `feeds.seeds`） | GoAnyAPI credits（8 种子 × 6） |
+| `# 收款链接`（全量） | `sellers.sellers` | 8 个平台 | $0.482 |
+| `# 建站作品`（全量） | `sellers.builders` | lovable / v0 / beehiiv | $0.166 |
 
-花费是 2026-11-09（周一）和 2026-11-11（周三）两次实测，从 `report.json` 里按块加出来的，不是估价。
+**每天合计约 $0.44，周一约 $1.22。** 平时只查有产出的平台（2026-11-16 那周：gumroad、creem、paddle、waffo 和 v0、beehiiv 都是 0 条），周一再全量扫一遍兜底。
+
+花费是 2026-11-09、11-11、11-16 几次实测，从 `report.json` 里按块加出来的，不是估价。
 
 ## 二、有代码、有章节，但调度命令用 `--skip` 关着
 

@@ -111,6 +111,7 @@ def cmd_sources(args, cfg: dict, state: Path) -> int:
 
 def cmd_daily(args, cfg: dict, state: Path) -> int:
     weekly = args.new_sites or date.today().weekday() == cfg["new_sites"]["weekday"]
+    day_cfg = _daily_platforms(cfg)      # the paid site signals ask less outside their weekly day
     blocks = {
         "x": run(lambda: sources.x_new(cfg, state), "x" in args.skip),
         "hf": run(lambda: sources.hf_new(cfg, state), "hf" in args.skip),
@@ -121,9 +122,9 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
             args.revenue or date.today().weekday() == cfg["revenue"]["weekday"])),
         "ask": run(lambda: asks.asks(cfg, state), "asks" in args.skip or not (
             args.asks or date.today().weekday() == cfg["asks"]["weekday"])),
-        "seller": run(lambda: sellers.sellers(cfg, state), "sellers" in args.skip or not (
+        "seller": run(lambda: sellers.sellers(day_cfg, state), "sellers" in args.skip or not (
             args.sellers or date.today().weekday() == cfg["sellers"]["weekday"])),
-        "builder": run(lambda: sellers.builders(cfg, state), "builders" in args.skip or not (
+        "builder": run(lambda: sellers.builders(day_cfg, state), "builders" in args.skip or not (
             args.sellers or date.today().weekday() == cfg["builders"]["weekday"])),
         "feed": run(lambda: feeds.feeds(cfg, state, weekly=args.feeds), "feeds" in args.skip),
     }
@@ -173,6 +174,20 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
 
 
 SITE_KINDS = ("builder", "seller")      # chapters that show a page's own title when the brief has nothing
+
+
+def _daily_platforms(cfg: dict, today: date | None = None) -> dict:
+    """On a day that is not the weekly day the paid site signals ask only the platforms that pay off every
+    day (`daily_platforms`); the weekly run still asks them all. A block without that list is left alone."""
+    today = today or date.today()
+    if today.weekday() == cfg["sellers"]["weekday"]:
+        return cfg
+    out = dict(cfg)
+    for block in ("sellers", "builders"):
+        every = (cfg.get(block) or {}).get("daily_platforms")
+        if every:
+            out[block] = dict(cfg[block], platforms=every)
+    return out
 
 
 def _to_label(cfg: dict, lead: list[dict]) -> list[dict]:
