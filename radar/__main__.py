@@ -167,8 +167,14 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
     summ = run(lambda: store.summary(conn))
     text = _archive(conn, args.command, report.daily(cfg, lead, blocks, found, rev, summ, extra), blocks, extra)
     if args.out:
-        Path(args.out).with_suffix(".json").write_text(json.dumps(
-            {"leads": lead, **blocks, "gsc": found, "review": rev, "summary": summ, "keywords": extra["usecases"]}, ensure_ascii=False, indent=1, default=str))
+        payload = json.dumps({"leads": lead, **blocks, "gsc": found, "review": rev, "summary": summ,
+                              "keywords": extra["usecases"]}, ensure_ascii=False, indent=1, default=str)
+        Path(args.out).with_suffix(".json").write_text(payload)
+        # What the report was built from, kept per day: the Markdown is for reading, this is for
+        # comparing two days by source ("did media.io add pages today, or only on Monday").
+        keep = state / "reports" / f"{date.today().isoformat()}.json"
+        keep.parent.mkdir(parents=True, exist_ok=True)
+        keep.write_text(payload)
     _finish(args, text, f"New-term radar {date.today()}")
     return 0
 
