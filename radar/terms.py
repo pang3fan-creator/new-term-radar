@@ -43,6 +43,7 @@ def terms(text: str) -> set[str]:
 
 
 _URL = re.compile(r"https?://\S+|@\w+")
+_CASH = re.compile(r"\$[A-Za-z][A-Za-z0-9]{0,9}\b")      # $ANT, $BTC: a ticker, not a product
 _TOKEN = re.compile(r"[A-Za-z0-9][\w.+\-]*[\w+]|[A-Za-z0-9]")
 
 
@@ -59,7 +60,7 @@ def names(text: str, strong: bool = False) -> set[str]:
     capitals, three or more capitals) are returned. Without it the caller must filter
     by novelty: those ordinary words are seen every day. `terms()` is for names and
     slugs; on prose it yields mostly ordinary bigrams."""
-    text = _URL.sub(" ", text or "")
+    text = _CASH.sub(" ", _URL.sub(" ", text or ""))
     out: set[str] = set()
     run: list[tuple[str, bool]] = []
 

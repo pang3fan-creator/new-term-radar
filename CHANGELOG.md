@@ -4,6 +4,8 @@
 
 - **报告直接给「需求」。** `brief` 那一步现在对每个线索多写一个 `need`（一个人会去 Google 搜的说法，最多 5 个词；品牌名/公司名/URL 片段留空）。有 `need` 的条目在章节里显示成 `**ai video clipping** ← OpusClip`：需求在前，产品名作为证据在后。④ 竞品 sitemap 那章改成：sitemaps 会给每个词带上 2–3 条代表页面，`need` 为空的品牌名和页面碎片收成一行（`不是需求,只是品牌名或页面碎片:deepseek、manifold…(共 25 个)`），只有真需求才逐条列。`# 主题` 和 `# 新名字的旁证` 下线（前者单源命中时只是重复别的章节，后者依附已下线的新词表），`sidelights.names` 默认 0。原因和重启条件写进 `docs/parked.md`。
 
+- **股票代码和币代号不再当名字。** `$ANT` 这种 cashtag 现在直接从文本里去掉（`radar/terms.py`）；`known_terms` 里 5 个字母以下的词改成只匹配整词，所以加 `ant` 不会把 `antigravity`、`instant`、`anthropic` 一起挡掉。2026-11-20 那次 X 只出了 `ant` 一条（Anthropic 的纳斯达克代码），现在不会了。
+
 - **Reddit 抓不到时不再显示成「没有产出」。** 2026-11-20 那次的 `# Reddit` 空着，实际是两个 subreddit 都失败（r/SomebodyMakeThis 429、r/AppIdeas 404，换个顺序又反过来，是这个 IP 被限流）。原来每个 subreddit 的 OSError 被直接吞掉，现在全部失败时会报错，章节显示原因而不是空着。
 
 - **付费信号改成每天跑，平台按产出筛过。** 求助、收款链接、建站作品、Google 新收录从每周一改成每天；新站和上升搜索仍每周一。为了把每天控制在 $0.44 左右，`sellers.daily_platforms`（dodo、polar）和 `builders.daily_platforms`（lovable）只用于非周一，周一仍按全量 `platforms` 扫一遍兜底；`feeds.weekly` 里去掉了 `google_new`。这些平台的选择依据是 2026-11-16 那周：gumroad、creem、paddle、waffo、v0、beehiiv 都是 0 条。

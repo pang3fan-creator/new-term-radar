@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -126,9 +127,15 @@ def load_env(path: Path | None = None) -> None:
 
 def known(cfg: dict, term: str) -> str:
     """The entry of known_terms that already covers this term, if any: what you have a
-    page for, or never want reported."""
+    page for, or never want reported. A short entry ("ant", "obs") matches a whole word only:
+    "ant" is not inside "antigravity" or "instant"."""
     for k in cfg["known_terms"]:
         k = k.lower()
-        if k and (k in term or term in k):
+        if not k:
+            continue
+        if len(k) >= 5:
+            if k in term or term in k:
+                return k
+        elif term == k or re.search(rf"(?<![a-z0-9]){re.escape(k)}(?![a-z0-9])", term):
             return k
     return ""

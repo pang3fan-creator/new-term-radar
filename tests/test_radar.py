@@ -2923,3 +2923,20 @@ def test_reddit_says_so_when_no_subreddit_answered(cfg, tmp_path, monkeypatch):
     cfg["feeds"]["enabled"], cfg["feeds"]["weekly"] = ["reddit_asks"], []
     out = feeds.feeds(cfg, tmp_path)
     assert out["read"].get("reddit_asks") == 0 and "429" in out["errors"][0]
+
+
+def test_a_cashtag_is_a_ticker_and_not_a_names_candidate():
+    """$ANT is what someone bought, not what someone built."""
+    assert names("I just bought 500 $ANT") == set()
+    assert names("$BTC and $ANT are moving today") == set()
+    assert "antigravity" in names("Try Antigravity today")        # the strip is only for $
+    # "ANT's stock price" still yields ant; known_terms is what keeps that one out
+    assert "ant" in names("everything is driven by ANT's stock price")
+
+
+def test_a_short_known_term_matches_a_whole_word_only(cfg):
+    cfg["known_terms"] = ["ant", "obs", "claude code"]
+    assert config.known(cfg, "ant") == "ant" and config.known(cfg, "ant stock") == "ant"
+    assert config.known(cfg, "antigravity") == "" and config.known(cfg, "instant") == ""      # not inside
+    assert config.known(cfg, "obs") == "obs" and config.known(cfg, "obsidian") == ""
+    assert config.known(cfg, "claude code pro") == "claude code"      # a long entry still covers the phrase
