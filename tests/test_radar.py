@@ -2866,3 +2866,32 @@ def test_the_brief_also_labels_a_site_whose_title_is_not_a_name(cfg):
             {"term": "pickagift", "kinds": ["seller"], "named": 0.2},
             {"term": "cartboss", "kinds": ["seller"], "named": 0.9}]
     assert [r["term"] for r in cli._to_label(cfg, lead)] == ["cartboss", "autism early signs scanner", "pickagift"]
+
+
+def test_a_paid_search_that_did_not_answer_is_an_error_not_an_empty_chapter(cfg, tmp_path, monkeypatch):
+    """⑨'s paid searches run weekly; a task the router leaves out of its answer looked like a quiet week."""
+    cfg["feeds"]["enabled"], cfg["feeds"]["weekly"] = ["google_new"], ["google_new"]
+    monkeypatch.setattr(feeds.aisa, "call", lambda calls: ({}, 10000))     # the task failed: its call_id is missing
+    out = feeds.feeds(cfg, tmp_path, weekly=True)
+    assert out["read"].get("google_new") == 0 and out["errors"][0].startswith("google_new:")
+    assert "did not answer" in out["errors"][0] and out["cost_micros"] == 10000
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    blocks["feed"] = out
+    text = report.daily(cfg, [], blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    assert "the search did not answer" in text       # the chapter keeps its error instead of disappearing
+
+
+def test_a_paid_search_answers_the_same_query_again_when_it_comes_back_empty(cfg, tmp_path, monkeypatch):
+    cfg["feeds"]["enabled"], cfg["feeds"]["weekly"], cfg["feeds"]["google_new"] = ["google_new"], ["google_new"], ["x.example"]
+    answers = iter([0, 1])            # the first ask comes back empty, the second one full
+
+    def call(calls):
+        empty = next(answers) == 0
+        items = [] if empty else [{"type": "organic", "url": "https://x.example/a", "title": "A tool - X", "description": "d"}]
+        return {"g": {"tasks": [{"result": [{"items": items}]}]}}, 10000
+    monkeypatch.setattr(feeds.aisa, "call", call)
+    monkeypatch.setattr(feeds.time, "sleep", lambda s: None)
+    got, cost = feeds.google_new(cfg["feeds"])
+    assert [i["name"] for i in got] == ["A tool"] and cost == 20000

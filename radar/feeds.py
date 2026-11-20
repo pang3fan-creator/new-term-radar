@@ -46,6 +46,13 @@ SERP = "post_dataforseo_serp_google_organic_live_regular"
 TOOLISH = re.compile(r"(?<![a-z])(ai|app|tool|generator|filter|effect|template|prompt|editor|maker|bot|gpt|agent|plugin|extension|"
                      r"converter|translator|avatar|trend|meme|viral|dance|edit|clip|reel)s?(?![a-z])"
                      r"|特效|模板|滤镜|工具|生成|剪辑|一键|智能|插件", re.I)
+class FeedError(aisa.AisaError):
+    """A feed that ran, spent money and failed: the cost still reaches the run's total."""
+    def __init__(self, msg: str, cost: int = 0):
+        super().__init__(msg)
+        self.cost = cost
+
+
 NOTE = {"google_new": "note_feed_google_new"}      # a feed whose label does not fit the generic sentence
 LABEL = {"producthunt": "Product Hunt", "hn": "Show HN", "openrouter": "OpenRouter", "civitai": "Civitai", "appstore": "App Store",
          "awesome": "awesome list", "google_new": "Google, new this week", "trending": "trending", "rising": "rising with",
@@ -238,19 +245,35 @@ def awesome(c: dict) -> tuple[list[dict], int]:
     return out, 0
 
 
+def _week_under(path: str) -> tuple[list[dict], int]:
+    """Google's pages under `path` indexed in the last seven days, asked twice when the first answer has none:
+    the same query came back empty and then full on the next call (2026-11-20), so an empty answer is not a fact."""
+    cost, items = 0, []
+    for attempt in (0, 1):
+        if attempt:
+            time.sleep(3)
+        data, spent = aisa.call([{"call_id": "g", "tool": SERP, "arguments": {"body": [{
+            "keyword": f"site:{path}", "location_code": 2840, "language_code": "en", "depth": 100,
+            "search_param": "tbs=qdr:w"}]}}])
+        cost += spent
+        if "g" not in data:      # a failed task is left out of the batch rather than raised: no pages is not no answer
+            raise FeedError(f"{path}: the search did not answer", cost)
+        res = ((((data.get("g") or {}).get("tasks") or [{}])[0].get("result") or [{}])[0]) or {}
+        items = [i for i in res.get("items") or [] if i.get("type") == "organic" and i.get("url")]
+        if items:
+            break
+    return [{"key": i["url"], "name": clean(re.split(r"\s+[|–—-]\s+", i.get("title") or "")[0], 80),
+             "url": i["url"], "about": clean(i.get("description") or ""), "where": path, "fresh": True}
+            for i in items], cost        # indexed in the last seven days
+
+
 def google_new(c: dict) -> tuple[list[dict], int]:
     """Pages Google indexed in the last seven days under each path."""
     out, cost = [], 0
     for path in c["google_new"]:
-        data, spent = aisa.call([{"call_id": "g", "tool": SERP, "arguments": {"body": [{
-            "keyword": f"site:{path}", "location_code": 2840, "language_code": "en", "depth": 100, "search_param": "tbs=qdr:w"}]}}])
+        got, spent = _week_under(path)
+        out += got
         cost += spent
-        res = ((((data.get("g") or {}).get("tasks") or [{}])[0].get("result") or [{}])[0]) or {}
-        for i in res.get("items") or []:
-            if i.get("type") == "organic" and i.get("url"):
-                name = re.split(r"\s+[|–—-]\s+", i.get("title") or "")[0]
-                out.append({"key": i["url"], "name": clean(name, 80), "url": i["url"], "about": clean(i.get("description") or ""),
-                            "where": path, "fresh": True})                   # indexed in the last seven days
     return out, cost
 
 
@@ -311,6 +334,8 @@ def feeds(cfg: dict, state: Path, today: date | None = None, weekly: bool = Fals
             items, cost = FEEDS[name](c)
         except (OSError, ValueError, KeyError, TypeError, aisa.AisaError, goanyapi.GoAnyError) as exc:
             out["errors"].append(f"{name}: {str(exc)[:120]}")
+            out["read"][name] = 0        # it ran and failed: the chapter says why instead of dropping out
+            out["cost_micros"] += getattr(exc, "cost", 0)
             continue
         out["cost_micros"] += cost
         out["read"][name] = len(items)
