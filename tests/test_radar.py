@@ -2910,3 +2910,16 @@ def test_the_paid_site_signals_ask_less_outside_their_weekly_day(cfg):
     assert mon["sellers"]["platforms"] == ["stripe", "polar", "dodo"] and mon["builders"]["platforms"] == ["lovable", "v0"]
     del cfg["sellers"]["daily_platforms"]
     assert cli._daily_platforms(cfg, date(2026, 11, 18))["sellers"]["platforms"] == ["stripe", "polar", "dodo"]
+
+
+def test_reddit_says_so_when_no_subreddit_answered(cfg, tmp_path, monkeypatch):
+    """Reddit answers a bot with 429 and 404 by turns; an empty chapter read as a quiet day."""
+    import urllib.error
+
+    def get(url):
+        raise urllib.error.HTTPError(url, 429, "Too Many Requests", {}, None)
+    monkeypatch.setattr(feeds, "get", get)
+    monkeypatch.setattr(feeds.time, "sleep", lambda s: None)
+    cfg["feeds"]["enabled"], cfg["feeds"]["weekly"] = ["reddit_asks"], []
+    out = feeds.feeds(cfg, tmp_path)
+    assert out["read"].get("reddit_asks") == 0 and "429" in out["errors"][0]

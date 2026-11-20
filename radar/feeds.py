@@ -156,14 +156,15 @@ def reddit_asks(c: dict) -> tuple[list[dict], int]:
     built. Read through each subreddit's RSS because reddit.com answers bots with 403 and its
     trending searches are the day's news, not a wish. The sentence is the demand itself, so it
     goes to the reader whole and no term is written for the judge."""
-    out, seen = [], set()
+    out, seen, failed = [], set(), []
     for i, sub in enumerate(c["reddit_subs"]):
         if i:
             time.sleep(c["reddit_pause"])      # a subreddit a minute; the rate limit is per minute
         try:
             xml = _reddit_rss(sub, c["reddit_pause"])
-        except OSError:
-            continue                           # one subreddit down must not lose the others
+        except OSError as exc:                 # one subreddit down must not lose the others
+            failed.append(f"r/{sub} {getattr(exc, 'code', type(exc).__name__)}")
+            continue
         kept = 0
         for entry in re.findall(r"<entry>(.*?)</entry>", xml, re.S):
             title = re.search(r"<title[^>]*>(.*?)</title>", entry, re.S)
@@ -182,6 +183,8 @@ def reddit_asks(c: dict) -> tuple[list[dict], int]:
                 kept += 1
                 if kept >= c["reddit_per_sub"]:        # every subreddit gets a share of the candidates
                     break
+    if failed and not out:      # Reddit answers bots with 429 mixed with 404: no wishes is not no answer
+        raise ValueError("; ".join(failed)[:200])
     return out, 0
 
 
