@@ -223,9 +223,12 @@ def test_a_new_site_comes_with_the_first_words_it_ranks_for(cfg, tmp_path, monke
                                                          "since": "2026-08-26..2026-10-06"}
     assert hailuo["words"][1]["country"] == "TW" and hailuo["words"][1]["since"] == ""
     assert out["cost_micros"] == 121200 * len(cfg["new_sites"]["queries"]) + 12240 + 12000
-    lines = "\n".join(report._site_word_lines(worded))
-    assert f"- {asked[1][1]}: ⏱ typing test 15 seconds #1 US, 30/mo, KD 0; 股价走势 #6 TW, 1000/mo, KD —" in lines
-    assert "(of 7 in the top 20)" in lines and "none in the top 20 yet" in lines
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    blocks["newsite"] = out
+    text = report.daily(cfg, [], blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    assert "main word: typing test 15 seconds #1, 30/mo" in text     # the busiest one, in a script one can read
     again = new_sites.new_sites(cfg, tmp_path, date(2026, 10, 13))       # seen before: no words asked again
     assert not any("words" in r for r in again["sites"])
 
@@ -2854,3 +2857,12 @@ def test_the_new_site_chapter_names_only_this_weeks_sites_and_says_what_they_do(
     assert "main word: ig video reel download #96, 450,000/mo" in text   # page ten still says what it is for
     assert "main word: facebook video downloader without watermark #79" in text   # not the Bengali one
     assert "1 more sites qualify" in text
+
+
+def test_the_brief_also_labels_a_site_whose_title_is_not_a_name(cfg):
+    """⑧b and ⑧ list pages by their own titles; without a label the chapter shows English."""
+    lead = [{"term": "autism early signs scanner", "kinds": ["builder"], "named": 0.2},
+            {"term": "ai headshot", "kinds": ["sitemap"], "named": 0.2},
+            {"term": "pickagift", "kinds": ["seller"], "named": 0.2},
+            {"term": "cartboss", "kinds": ["seller"], "named": 0.9}]
+    assert [r["term"] for r in cli._to_label(cfg, lead)] == ["cartboss", "autism early signs scanner", "pickagift"]

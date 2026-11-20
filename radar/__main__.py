@@ -136,7 +136,7 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
     conn = store.connect(state)
     # The brief runs before the record: a name it calls established never reaches the archive either.
     extra = {"judge": judged,
-             "brief": run(lambda: brief.annotate(report.named(cfg, lead), cfg["brief"],
+             "brief": run(lambda: brief.annotate(_to_label(cfg, lead), cfg["brief"],
                                                  use_model="brief" not in args.skip)),
              "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))})}
     # The chat calls are billed apart from the data APIs: the judge and the brief take their own tokens.
@@ -170,6 +170,18 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
             {"leads": lead, **blocks, "gsc": found, "review": rev, "summary": summ, "keywords": extra["usecases"]}, ensure_ascii=False, indent=1, default=str))
     _finish(args, text, f"New-term radar {date.today()}")
     return 0
+
+
+SITE_KINDS = ("builder", "seller")      # chapters that show a page's own title when the brief has nothing
+
+
+def _to_label(cfg: dict, lead: list[dict]) -> list[dict]:
+    """What the brief writes in the report's language: the leads the judge called names, and every site the
+    builder and seller chapters list, because those chapters say what each page does even when its title is
+    not the name of a thing."""
+    labelled = report.named(cfg, lead)
+    seen = {id(r) for r in labelled}
+    return labelled + [r for r in lead if set(SITE_KINDS) & set(r.get("kinds") or []) and id(r) not in seen]
 
 
 def paying_sites(blocks: dict) -> list[str]:

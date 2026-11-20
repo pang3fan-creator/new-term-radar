@@ -114,7 +114,7 @@ def _rows(source: str, b: dict[str, dict], by_term: dict[str, dict],
         for s in b.get("newsite", {}).get("sites") or []:
             if not s.get("new"):
                 continue      # named the week it appeared; a site already listed is not news again
-            r = _match(s["domain"], by_term)
+            r = _match(s["domain"], labels)      # every label names the site, judged a name or not
             what = _what(r) or _clip(_cell(s.get("description") or s.get("title") or ""), 60) or t("why_newsite")
             out.append((s["domain"], what, t("tag_visits", etv=f"{s['etv']:,}", kw=s["keywords"]), r))
     elif source == "revenue":
@@ -127,11 +127,11 @@ def _rows(source: str, b: dict[str, dict], by_term: dict[str, dict],
             out.append((row["phrase"], _what(r) or t("why_ask"), t("tag_volume", n=f"{row['volume']:,}"), r))
     elif source == "seller":
         for s in b.get("seller", {}).get("sellers") or []:
-            r = _match(s.get("term") or s["host"], by_term)   # the page's own name, not a substring of its host
+            r = _match(s.get("term") or s["host"], labels)   # the page's own name, not a substring of its host
             out.append((s["host"], _what(r) or _clip(_cell(s["title"]), 60), sellers.LABEL.get(s["platform"], s["platform"]), r))
     elif source == "builder":
         for s in b.get("builder", {}).get("sites") or []:
-            r = _match(s.get("term") or s["host"], by_term)   # ditto: *.lovable.app is not "lovable"
+            r = _match(s.get("term") or s["host"], labels)   # ditto: *.lovable.app is not "lovable"
             out.append((s["host"], _what(r) or _clip(_cell(s["title"]), 60), sellers.LABEL.get(s["platform"], s["platform"]), r))
     elif source in FEED_SOURCES:
         name = SOURCE_KEY[source][5:].split(":")[0]
@@ -279,43 +279,10 @@ def _breakout_lines(bo: dict, cfg: dict) -> list[str]:
                     f"{_cell(r['description'][:60])} |" for r in repos]
 
 
-def _new_site_lines(ns: dict, cfg: dict) -> list[str]:
-    if ns.get("skipped"):
-        return []
-    c = cfg["new_sites"]
-    lines = ["", t("newsite_h", days=c["window_days"], etv=c["min_etv"], kw=c["min_keywords"]), ""]
-    sites = ns.get("sites") or []
-    if not sites:
-        return lines + [t("recent_none", why=ns.get("error") or t("newsite_none"))]
-    lines += [t("newsite_cols"), "|---|---|---|---|---|"]
-    lines += [f"| {'🆕 ' if r['new'] else ''}[{r['domain']}](https://{r['domain']}) | {r['created']} | {r['first_seen']} | "
-              f"{r['etv']} | {r['keywords']} |" for r in sites]
-    return lines + _site_word_lines([r for r in sites if r.get("words") is not None])
-
-
 def _main_word(words: list[dict]) -> dict | None:
     """The word a new site is really built for: the busiest it ranks for, in a script the reader can read
     when the site ranks in several (a Turkish site's busiest word can be Bengali)."""
     return next((w for w in words if w["word"].isascii()), words[0] if words else None) or None
-
-
-def _word_said(w: dict) -> str:
-    """One word a new site ranks for, as the reader needs it: the word, where it ranks, how big it is."""
-    return ("⏱ " if w["since"] else "") + t("newsite_word", word=_cell(w["word"]), pos=w["position"] or t("dash"),
-                                            country=w["country"] or t("dash"), vol=w["volume"] or t("dash"),
-                                            kd=t("dash") if w["kd"] is None else w["kd"])
-
-
-def _site_word_lines(sites: list[dict]) -> list[str]:
-    """The first words each new site ranks for in the top 20 (radar/site_words.py)."""
-    if not sites:
-        return []
-    lines = ["", t("newsite_words_h")]
-    for r in sites:
-        said = "; ".join(_word_said(w) for w in r["words"])
-        more = t("newsite_words_more", n=r["top"]) if r["top"] > len(r["words"]) else ""
-        lines.append(f"- {r['domain']}: {said or t('newsite_words_none')}{more}")
-    return lines
 
 
 def _revenue_lines(rv: dict, cfg: dict) -> list[str]:
