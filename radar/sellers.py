@@ -204,7 +204,10 @@ def term_of(host: str, title: str) -> str:
     if head and 1 <= len(head.split()) <= 4 and len(head) <= 40:
         return head.lower()
     label = host.split(".")
-    return (label[-3] if len(label) > 2 and label[-2] in ("framer", "notion", "carrd", "webflow", "vercel", "netlify", "github")
+    # A site on a builder's domain is named by its own subdomain, not by the builder: every
+    # *.lovable.app page that does not answer is not the same thing ("lovable").
+    return (label[-3] if len(label) > 2 and label[-2] in ("framer", "notion", "carrd", "webflow", "vercel", "netlify",
+                                                         "github", "lovable", "v0", "beehiiv")
             else label[-2] if len(label) >= 2 else host).lower()
 
 

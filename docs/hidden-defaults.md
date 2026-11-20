@@ -24,7 +24,7 @@
 | `TOP`（sitemap） | `25` | `radar/sitemaps.py:35` | 每个站最多报 25 个上升词 | 长尾在 25 名之后的不报 |
 | `DOMAIN_STOP` | `com/net/free/tool/…` | `radar/new_sites.py:31` | 从域名拆词时丢掉这些 | `aifree.com` 拆不出 `aifree` 这种名字 |
 | `TOOLISH` | 工具词 + `trend/meme/viral/dance/edit/clip/reel` | `radar/feeds.py:44` | 热搜词的过滤 | 已放宽；**音频类仍会进来**（歌词、phonk） |
-| `TOP`, `WORDS`, `SITES_MAX` | `20, 5, 10` | `radar/site_words.py:15-17` | 新站只报前 20 名的 5 个词，每次最多 10 个站 | 第 11 个站起这个月看不到 |
+| `TOP`, `WORDS`, `SITES_MAX` | `100, 5, 10` | `radar/site_words.py:15-17` | 新站报前 100 名的 5 个词，每次最多 10 个站 | 第 11 个站起这个月看不到；位置放宽到 100 名是因为新站的主打词常在第 2–10 页 |
 | `VIRAL`, `SHARE` | `1000`, `0.25` | `radar/opportunity.py:29-30` | ⚡ 标记要 1000 赞；格式要在 25% 的帖子里出现 | 小众但真实的教程不会带 ⚡ |
 
 ## 三、判定阈值（影响数字和结论）

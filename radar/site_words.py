@@ -1,7 +1,8 @@
 """The first words a new site ranks for (0.6): what a site a few weeks old has won, so a new site can win it too.
 
-A domain registered in the last few months that already ranks on Google's first two pages has found searches a new
-site can reach. For each site new this week, the most traffic first and SITES_MAX at most, DataForSEO Labs' ranked
+A domain registered in the last few months that already ranks on Google has found searches a new site can reach.
+A new site rarely sits on page one: the busiest word it targets is often its own statement of what it is for, which
+is why TOP reaches ten pages rather than two. For each site new this week, the most traffic first and SITES_MAX at most, DataForSEO Labs' ranked
 keywords (through AIsa's REST passthrough: about $0.012 a site, $0.00012 a word) give its WORDS words in the top TOP,
 the most traffic first, in any country: a new site often starts outside the US (on 2026-10-27, one registered in
 August ranked 5 to 11 in Taiwan for stock-price long-tails and for nothing in the US top 20). Labs keeps no day a site
@@ -12,7 +13,7 @@ from __future__ import annotations
 from . import aisa
 
 PATH = "dataforseo_labs/google/ranked_keywords/live"
-TOP = 20                # positions that count: the first two pages
+TOP = 100               # positions that count: a new site's main word is often on page 2 to 10
 WORDS = 5               # words kept a site
 SITES_MAX = 10          # sites asked a run
 COUNTRIES = {2840: "US", 2826: "UK", 2124: "CA", 2036: "AU", 2356: "IN", 2276: "DE", 2250: "FR", 2724: "ES", 2380: "IT",

@@ -2795,3 +2795,62 @@ def test_chat_cost_due_window_x_age_missing_visits_and_fan_out_modifiers(cfg, tm
     assert mods.get("github") == 2 and mods.get("2026") == 2
     ai_text = "\n".join(report._ai_lines(job_rows, cfg))
     assert "fan-out modifiers: 2026 (2), github (2)" in ai_text
+
+
+# --- ⑧b builders: a site on a builder's domain is not the builder --------------------------
+
+def test_a_page_on_a_builders_domain_is_named_by_its_own_subdomain():
+    assert sellers.term_of("austismearlysigns.lovable.app", "") == "austismearlysigns"
+    assert sellers.term_of("foo.beehiiv.com", "") == "foo"
+    assert sellers.term_of("bar.v0.app", "") == "bar"
+    assert sellers.term_of("pestora.framer.website", "") == "pestora"
+
+
+def test_two_builder_pages_in_one_chapter_do_not_share_one_label(cfg):
+    """Every *.lovable.app host used to match the single "lovable" lead by substring, so eleven
+    different sites read as one product."""
+    lead = [{"term": "lovable", "kinds": ["builder"], "signals": ["built with Lovable"], "examples": [], "variants": [],
+             "posts": [], "named": 0.9, "known": "", "format": "text", "kind": "tool", "why": "no description", "use": "new"},
+            {"term": "autism early signs scanner", "kinds": ["builder"], "signals": ["built with Lovable"], "examples": [],
+             "variants": [], "posts": [], "named": 0.9, "known": "", "format": "text", "kind": "tool",
+             "why": "a two-minute assessment for early signs of autism", "use": "new"}]
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    blocks["builder"] = {"sites": [
+        {"host": "ppdbslbsliat.lovable.app", "term": "lovable", "title": "", "platform": "lovable", "kind": "ai"},
+        {"host": "austismearlysigns.lovable.app", "term": "autism early signs scanner", "platform": "lovable", "kind": "ai",
+         "title": "Autism Early Signs Scanner — Free 2-Minute Parent Assessment"},
+    ], "by_kind": {}, "errors": []}
+    text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    assert "**austismearlysigns.lovable.app** — a two-minute assessment for early signs of autism" in text
+    assert "**ppdbslbsliat.lovable.app** — no description" in text
+
+
+# --- ③ newsites: only what is new, what it does, the words it is built for ----------------
+
+def test_the_new_site_chapter_names_only_this_weeks_sites_and_says_what_they_do(cfg):
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    blocks["newsite"] = {"sites": [
+        {"domain": "downigvideo.com", "new": True, "etv": 37073, "keywords": 45,
+         "description": "Download videos from Instagram, TikTok and YouTube in one click",
+         "top": 109, "words": [
+             {"word": "ig video reel download", "position": 96, "volume": 450000, "kd": None, "country": "US",
+              "url": "", "since": ""},
+             {"word": "download videos instagram", "position": 31, "volume": 40500, "kd": 12, "country": "US",
+              "url": "", "since": ""}]},
+        {"domain": "listed-last-week.com", "new": False, "etv": 5000, "keywords": 30, "description": "not news"},
+        {"domain": "turktool.com", "new": True, "etv": 3943, "keywords": 407, "description": "video saver", "top": 30,
+         "words": [{"word": "ফেসবুক ভিডিও ডাউনলোড", "position": 64, "volume": 165000, "kd": 32, "country": "BD",
+                    "url": "", "since": ""},
+                   {"word": "facebook video downloader without watermark", "position": 79, "volume": 135000, "kd": 37,
+                    "country": "US", "url": "", "since": ""}]},
+    ], "errors": []}
+    text = report.daily(cfg, [], blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    assert "1. **downigvideo.com** — Download videos from Instagram, TikTok and YouTube in one" in text
+    assert "listed-last-week.com" not in text
+    assert "main word: ig video reel download #96, 450,000/mo" in text   # page ten still says what it is for
+    assert "main word: facebook video downloader without watermark #79" in text   # not the Bengali one
+    assert "1 more sites qualify" in text

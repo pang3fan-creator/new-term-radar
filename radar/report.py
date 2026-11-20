@@ -112,8 +112,11 @@ def _rows(source: str, b: dict[str, dict], by_term: dict[str, dict],
     out = []
     if source == "newsite":
         for s in b.get("newsite", {}).get("sites") or []:
+            if not s.get("new"):
+                continue      # named the week it appeared; a site already listed is not news again
             r = _match(s["domain"], by_term)
-            out.append((s["domain"], _what(r) or t("why_newsite"), t("tag_visits", etv=f"{s['etv']:,}", kw=s["keywords"]), r))
+            what = _what(r) or _clip(_cell(s.get("description") or s.get("title") or ""), 60) or t("why_newsite")
+            out.append((s["domain"], what, t("tag_visits", etv=f"{s['etv']:,}", kw=s["keywords"]), r))
     elif source == "revenue":
         for p in b.get("revenue", {}).get("products") or []:
             r = _match(p["name"], by_term)
@@ -124,11 +127,11 @@ def _rows(source: str, b: dict[str, dict], by_term: dict[str, dict],
             out.append((row["phrase"], _what(r) or t("why_ask"), t("tag_volume", n=f"{row['volume']:,}"), r))
     elif source == "seller":
         for s in b.get("seller", {}).get("sellers") or []:
-            r = _match(s["host"], by_term)
+            r = _match(s.get("term") or s["host"], by_term)   # the page's own name, not a substring of its host
             out.append((s["host"], _what(r) or _clip(_cell(s["title"]), 60), sellers.LABEL.get(s["platform"], s["platform"]), r))
     elif source == "builder":
         for s in b.get("builder", {}).get("sites") or []:
-            r = _match(s["host"], by_term)
+            r = _match(s.get("term") or s["host"], by_term)   # ditto: *.lovable.app is not "lovable"
             out.append((s["host"], _what(r) or _clip(_cell(s["title"]), 60), sellers.LABEL.get(s["platform"], s["platform"]), r))
     elif source in FEED_SOURCES:
         name = SOURCE_KEY[source][5:].split(":")[0]
@@ -153,8 +156,9 @@ def _rows(source: str, b: dict[str, dict], by_term: dict[str, dict],
     else:                                  # X reports what the judge kept
         out = [(r["term"], _what(r) or r["term"], "", r) for r in by_term.values() if _from_source(r, source)]
     used = {id(r) for *_, r in out if r}
+    # ③'s items are its sites, so a lead of theirs is already above; the tail would bring back a site listed before.
     out += [(r["term"], _what(r), "", r) for r in by_term.values()
-            if _from_source(r, source) and id(r) not in used]      # a judged word the source no longer lists
+            if source != "newsite" and _from_source(r, source) and id(r) not in used]      # a judged word the source no longer lists
     return out
 
 
@@ -289,15 +293,26 @@ def _new_site_lines(ns: dict, cfg: dict) -> list[str]:
     return lines + _site_word_lines([r for r in sites if r.get("words") is not None])
 
 
+def _main_word(words: list[dict]) -> dict | None:
+    """The word a new site is really built for: the busiest it ranks for, in a script the reader can read
+    when the site ranks in several (a Turkish site's busiest word can be Bengali)."""
+    return next((w for w in words if w["word"].isascii()), words[0] if words else None) or None
+
+
+def _word_said(w: dict) -> str:
+    """One word a new site ranks for, as the reader needs it: the word, where it ranks, how big it is."""
+    return ("⏱ " if w["since"] else "") + t("newsite_word", word=_cell(w["word"]), pos=w["position"] or t("dash"),
+                                            country=w["country"] or t("dash"), vol=w["volume"] or t("dash"),
+                                            kd=t("dash") if w["kd"] is None else w["kd"])
+
+
 def _site_word_lines(sites: list[dict]) -> list[str]:
     """The first words each new site ranks for in the top 20 (radar/site_words.py)."""
     if not sites:
         return []
     lines = ["", t("newsite_words_h")]
     for r in sites:
-        said = "; ".join(("⏱ " if w["since"] else "") + t("newsite_word", word=_cell(w["word"]), pos=w["position"] or t("dash"),
-                                                           country=w["country"] or t("dash"), vol=w["volume"] or t("dash"),
-                                                           kd=t("dash") if w["kd"] is None else w["kd"]) for w in r["words"])
+        said = "; ".join(_word_said(w) for w in r["words"])
         more = t("newsite_words_more", n=r["top"]) if r["top"] > len(r["words"]) else ""
         lines.append(f"- {r['domain']}: {said or t('newsite_words_none')}{more}")
     return lines
@@ -647,6 +662,18 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
                     shown = "、".join(x[0] for x in rest[:6])
                     lines.append(t("sitemap_rest", names=shown) if len(rest) <= 6 else
                                  t("sitemap_rest_more", names=shown, n=len(rest)))
+            elif source == "newsite":        # what the site does, then the word it is built for
+                sites = {s["domain"]: s for s in b.get("newsite", {}).get("sites") or []}
+                for i, (name, what, number, r) in enumerate(rows, 1):
+                    lines.append(f"{i}. " + _line(name, what, number, r))
+                    w = _main_word((sites.get(name) or {}).get("words") or [])
+                    if w:
+                        said = t("newsite_word_brief", word=_cell(w["word"]), pos=w["position"] or t("dash"),
+                                 vol=f"{w['volume']:,}" if w["volume"] else t("dash"))
+                        lines.append(f"   → {t('newsite_main_words', word=said)}")
+                older = len(sites) - len(rows)
+                if older:
+                    lines += ["", t("newsite_older", n=older)]
             elif source == "reddit":         # the title as posted, then what it asks for
                 for i, (name, _why, place, item) in enumerate(rows, 1):
                     lines.append(f"{i}. **{name}**（{place}）")

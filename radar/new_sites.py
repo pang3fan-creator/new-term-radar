@@ -22,7 +22,7 @@ import re
 from datetime import date, timedelta
 from pathlib import Path
 
-from . import aisa, site_words, snap
+from . import aisa, sellers, site_words, snap
 from .i18n import t
 from .terms import STOP
 
@@ -83,6 +83,9 @@ def new_sites(cfg: dict, state: Path, today: date | None = None) -> dict:
         seen.setdefault(r["domain"], today.isoformat())
     if answered:
         snap.save(path, seen)
+    for r in rows:                       # what the site itself says it does: its own title and description, free
+        if r["new"]:
+            r["title"], r["description"] = sellers.page_words(r["domain"])
     if c.get("words", site_words.SITES_MAX):
         spent, failed = site_words.add_words(rows, c.get("words", site_words.SITES_MAX))
         cost, errors = cost + spent, errors + failed
