@@ -2940,3 +2940,19 @@ def test_a_short_known_term_matches_a_whole_word_only(cfg):
     assert config.known(cfg, "antigravity") == "" and config.known(cfg, "instant") == ""      # not inside
     assert config.known(cfg, "obs") == "obs" and config.known(cfg, "obsidian") == ""
     assert config.known(cfg, "claude code pro") == "claude code"      # a long entry still covers the phrase
+
+
+def test_a_feed_chapter_keeps_the_makers_own_sentence_under_our_reading(cfg):
+    """Product Hunt's tagline is the founder's positioning, and often the keyword they target."""
+    lead = [{"term": "huntmonitor", "kinds": ["feed"], "feeds": ["producthunt"], "signals": ["new on Product Hunt"],
+             "examples": [], "variants": [], "posts": [], "named": 0.9, "known": "", "format": "text", "kind": "tool",
+             "why": "实时监控 Product Hunt 排名", "use": "new"}]
+    blocks = {k: {"skipped": True} for k in ("x", "hf", "breakout", "sitemap", "newsite", "revenue", "ask", "seller",
+                                             "builder", "feed", "money")}
+    blocks["feed"] = {"read": {"producthunt": 1}, "errors": [], "new": {"producthunt": [
+        {"name": "HuntMonitor", "about": "Real-time monitoring for Product Hunt rankings", "url": "", "where": ""}]}}
+    cfg["feeds"]["enabled"], cfg["feeds"]["weekly"] = ["producthunt"], []
+    text = report.daily(cfg, lead, blocks, {}, {"skipped": True}, {"pending": 0, "by_signal": {}},
+                        {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
+    assert "实时监控 Product Hunt 排名" in text
+    assert "   → Real-time monitoring for Product Hunt rankings" in text

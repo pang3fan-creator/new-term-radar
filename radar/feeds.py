@@ -53,6 +53,7 @@ class FeedError(aisa.AisaError):
         self.cost = cost
 
 
+_SERP_DATE = re.compile(r"^\d+\s+(?:second|minute|hour|day|week|month|year)s?\s+ago\s+[—–-]\s*", re.I)
 NOTE = {"google_new": "note_feed_google_new"}      # a feed whose label does not fit the generic sentence
 LABEL = {"producthunt": "Product Hunt", "hn": "Show HN", "openrouter": "OpenRouter", "civitai": "Civitai", "appstore": "App Store",
          "awesome": "awesome list", "google_new": "Google, new this week", "trending": "trending", "rising": "rising with",
@@ -266,8 +267,8 @@ def _week_under(path: str) -> tuple[list[dict], int]:
         if items:
             break
     return [{"key": i["url"], "name": clean(re.split(r"\s+[|–—-]\s+", i.get("title") or "")[0], 80),
-             "url": i["url"], "about": clean(i.get("description") or ""), "where": path, "fresh": True}
-            for i in items], cost        # indexed in the last seven days
+             "url": i["url"], "about": clean(_SERP_DATE.sub("", i.get("description") or "")), "where": path,
+             "fresh": True} for i in items], cost        # indexed in the last seven days
 
 
 def google_new(c: dict) -> tuple[list[dict], int]:

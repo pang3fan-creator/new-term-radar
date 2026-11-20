@@ -101,6 +101,18 @@ def _match(term: str, by_term: dict[str, dict]) -> dict:
     return None
 
 
+def _feed_about(b: dict[str, dict]) -> dict[str, str]:
+    """The source's own sentence for each feed item (Product Hunt's tagline, an app's subtitle):
+    what the maker wrote, before the brief put it in the report's language."""
+    out: dict[str, str] = {}
+    for items in (b.get("feed", {}).get("new") or {}).values():
+        for i in items:
+            said = _clip(_cell(i.get("about") or "").replace("Discussion / Link", "").strip(), 110)
+            if said and i.get("name"):
+                out.setdefault(i["name"], said)
+    return out
+
+
 def _rows(source: str, b: dict[str, dict], by_term: dict[str, dict],
           labels: dict[str, dict] | None = None) -> list[tuple[str, str, str, dict]]:
     """Every item this source produced today: (name, what it is, the source's own number, its lead).
@@ -647,8 +659,12 @@ def daily(cfg: dict, lead: list[dict], b: dict[str, dict], gsc: dict, rev: dict,
                     if item and item.get("zh"):
                         lines.append(f"   → {item['zh']}")
             else:
+                said = _feed_about(b)
                 for i, (name, what, number, r) in enumerate(rows, 1):     # every item the source listed
                     lines.append(f"{i}. " + _line(name, what, number, r))
+                    own = said.get(name) if r and _what(r) else ""         # our reading, then what they wrote
+                    if own and own.lower() not in what.lower():
+                        lines.append(f"   → {own}")
         else:
             lines.append(_chapter_state(source, b) or t("src_empty"))
     if any(_marks(r) for r in all_named):
