@@ -102,14 +102,17 @@ def _match(term: str, by_term: dict[str, dict]) -> dict:
 
 
 def _feed_about(b: dict[str, dict]) -> dict[str, str]:
-    """The source's own sentence for each feed item (Product Hunt's tagline, an app's subtitle):
-    what the maker wrote, before the brief put it in the report's language."""
+    """The source's own words for each feed item: the site's <title> when it was read (Product Hunt), else
+    the tagline or subtitle the source carries. This is what they wrote, before the brief read it."""
     out: dict[str, str] = {}
     for items in (b.get("feed", {}).get("new") or {}).values():
         for i in items:
-            said = _clip(_cell(i.get("about") or "").replace("Discussion / Link", "").strip(), 110)
+            title = " ".join((i.get("title") or "").split())
+            tagline = " ".join((i.get("about") or "").replace("Discussion / Link", "").split())
+            # a title that says no more than the name ("Teaflask Docs") is the brand, not the keyword
+            said = title if len(title.split()) > 3 else (tagline or title)
             if said and i.get("name"):
-                out.setdefault(i["name"], said)
+                out.setdefault(i["name"], _clip(said, 110))
     return out
 
 

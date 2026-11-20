@@ -85,9 +85,40 @@ PH_QUERY = """
 query ($after: DateTime, $cursor: String) {
   posts(postedAfter: $after, featured: true, first: 20, order: VOTES, after: $cursor) {
     pageInfo { hasNextPage endCursor }
-    edges { node { name tagline slug url votesCount commentsCount } }
+    edges { node { name tagline slug url votesCount commentsCount productLinks { url type } } }
   }
 }"""
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs) -> None:
+        return None
+
+
+_PH_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
+def ph_real_url(link: str) -> str:
+    """The site behind a Product Hunt outbound link. Every link in the API is producthunt.com/r/…;
+    its GET is a Cloudflare challenge, but a HEAD that does not follow answers 301 with the URL."""
+    try:
+        _PH_OPENER.open(urllib.request.Request(link, headers={"User-Agent": UA}, method="HEAD"), timeout=10)
+        return ""
+    except urllib.error.HTTPError as exc:
+        return exc.headers.get("Location", "") if exc.code in (301, 302, 303, 307, 308) else ""
+    except (OSError, ValueError):
+        return ""
+
+
+def page_title(url: str) -> str:
+    """The page's own <title>: what the site says it is for, keywords and all."""
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=12) as res:
+            html_text = res.read(120_000).decode("utf-8", "replace")
+    except (OSError, ValueError):
+        return ""
+    m = re.search(r"<title[^>]*>(.*?)</title>", html_text, re.I | re.S)
+    return clean(m.group(1)) if m else ""
 
 
 def producthunt_api(token: str) -> list[dict]:
@@ -108,9 +139,12 @@ def producthunt_api(token: str) -> list[dict]:
         for edge in posts.get("edges") or []:
             n = edge["node"]
             url = n.get("url") or f"https://www.producthunt.com/posts/{n.get('slug', '')}"
+            links = n.get("productLinks") or []
+            site = next((l["url"] for l in links if (l.get("type") or "").lower() == "website"), "")
+            site = site or next((l["url"] for l in links if l.get("url")), "")
             out.append({"key": url, "name": (n.get("name") or "")[:80], "url": url,
                         "about": clean(n.get("tagline") or ""), "score": int(n.get("votesCount") or 0),
-                        "comments": int(n.get("commentsCount") or 0), "fresh": True})
+                        "comments": int(n.get("commentsCount") or 0), "site": site, "fresh": True})
         page = posts.get("pageInfo") or {}
         if not page.get("hasNextPage"):
             break
@@ -355,6 +389,12 @@ def feeds(cfg: dict, state: Path, today: date | None = None, weekly: bool = Fals
         cap = c["max_per_feed"] if name != "reddit_asks" else \
             len(c["reddit_subs"]) * c["reddit_per_sub"]      # the reading step drops what has no demand
         fresh = sorted(fresh, key=lambda i: -(i.get("score") or 0))[:cap]
+        if name == "producthunt":       # what each launch calls itself in its own <title>, for the ones listed
+            with ThreadPoolExecutor(6) as pool:
+                titles = list(pool.map(lambda i: page_title(ph_real_url(i["site"])) if i.get("site") else "", fresh))
+            for item, title in zip(fresh, titles):
+                if title:
+                    item["title"] = title[:120]
         out["new"][name] = fresh
         for i in fresh:
             if name == "reddit_asks":

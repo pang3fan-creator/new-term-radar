@@ -4,6 +4,8 @@
 
 - **报告直接给「需求」。** `brief` 那一步现在对每个线索多写一个 `need`（一个人会去 Google 搜的说法，最多 5 个词；品牌名/公司名/URL 片段留空）。有 `need` 的条目在章节里显示成 `**ai video clipping** ← OpusClip`：需求在前，产品名作为证据在后。④ 竞品 sitemap 那章改成：sitemaps 会给每个词带上 2–3 条代表页面，`need` 为空的品牌名和页面碎片收成一行（`不是需求,只是品牌名或页面碎片:deepseek、manifold…(共 25 个)`），只有真需求才逐条列。`# 主题` 和 `# 新名字的旁证` 下线（前者单源命中时只是重复别的章节，后者依附已下线的新词表），`sidelights.names` 默认 0。原因和重启条件写进 `docs/parked.md`。
 
+- **Product Hunt 的官网标题现在直接抓，不花钱。** API 里每条外链都是 `producthunt.com/r/…`，它的 GET 会撞上 Cloudflare 挑战（403），但**不跟随的 HEAD 会返回 301 和真实地址**，再抓那个地址的 `<title>` 就拿到官网自己的元标题了。只抓会被列出来的那 20 条，约 18 秒，零花费。标题如果只是品牌名（「Teaflask Docs」）就退回 PH 的 tagline。
+
 - **上线类章节贴上来源自己写的那句话。** ④ Product Hunt、App Store、Google 新收录，每条下面加一行原文（PH 的 tagline、应用的副标题、页面的描述）：中文那行是模型读出来的定位，原文才是他们自己主打的说法。Product Hunt 的官网打不开（整站 403，跳转链接和产品页都试过），所以用的是 API 里的 tagline。顺带去掉 Google 新收录描述里的「3 days ago —」这种时间前缀。
 
 - **股票代码和币代号不再当名字。** `$ANT` 这种 cashtag 现在直接从文本里去掉（`radar/terms.py`）；`known_terms` 里 5 个字母以下的词改成只匹配整词，所以加 `ant` 不会把 `antigravity`、`instant`、`anthropic` 一起挡掉。2026-11-20 那次 X 只出了 `ant` 一条（Anthropic 的纳斯达克代码），现在不会了。
