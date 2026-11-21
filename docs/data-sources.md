@@ -16,11 +16,11 @@
 | `# App Store` | `feeds.appstore` | App Store 新上架（`app_genres`） | 0（苹果公开 RSS） |
 | `# TikTok 热搜` | `feeds.trending` | TikTok 热搜（`feeds.trending`） | 含在 $0.003 |
 | `# Reddit` | `feeds.reddit_asks` | r/SomebodyMakeThis、r/AppIdeas 的新帖 RSS（`feeds.reddit_subs`） | 0（普通 HTTP，中文解读约 $0.002） |
-| `# Google 新收录` | `feeds.google_new` | Figma 社区 / TAAFT / Chrome 商店 | $0.040 |
+| `# Google 新收录` | `feeds.google_new` | Figma 社区 / TAAFT（Chrome 商店那条已去掉，永远轮不到显示） | $0.019 |
 | `# TrustMRR 收入` | `revenue.products` | TrustMRR API | 0（免费 key） |
-| `# 求助` | `asks.asks` | Reddit 搜索「找工具」的帖 | $0.190 |
-| `# 收款链接` | `sellers.sellers` | 花钱挂链接的站（`sellers.daily_platforms`：dodo、polar） | $0.121 |
-| `# 建站作品` | `sellers.builders` | 刚用 Lovable 建的站（`builders.daily_platforms`） | $0.055 |
+| ~~`# 求助`~~ | `asks.asks` | 只在周一跑（每天跑要 $0.26，产出的词量又小） | 周一 $0.259 |
+| `# 收款链接` | `sellers.sellers` | 花钱挂链接的站（`sellers.daily_platforms`：dodo 一个平台） | $0.080 |
+| `# 建站作品` | `sellers.builders` | 刚用 Lovable 建的站（`builders.daily_platforms`） | $0.057 |
 
 每周一多跑（2 个），并且「收款链接」「建站作品」这一天天改用全量平台：
 
@@ -31,7 +31,7 @@
 | `# 收款链接`（全量） | `sellers.sellers` | 8 个平台 | $0.482 |
 | `# 建站作品`（全量） | `sellers.builders` | lovable / v0 / beehiiv | $0.166 |
 
-**每天合计约 $0.44，周一约 $1.22。** 平时只查有产出的平台（2026-11-16 那周：gumroad、creem、paddle、waffo 和 v0、beehiiv 都是 0 条），周一再全量扫一遍兜底。
+**每天合计约 $0.24，周一约 $1.3。** 2026-11-21 为控成本做过一轮减法：求助改成只周一跑、收款链接每天只查一个平台、Google 新收录去掉 Chrome 那条路径、每条源最多 8 条（收款和建站各 6 条），报告从 91 条降到 40 条上下。 平时只查有产出的平台（2026-11-16 那周：gumroad、creem、paddle、waffo 和 v0、beehiiv 都是 0 条），周一再全量扫一遍兜底。
 
 花费是 2026-11-09、11-11、11-16 几次实测，从 `report.json` 里按块加出来的，不是估价。
 
