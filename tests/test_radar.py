@@ -2513,12 +2513,15 @@ def test_brief_keeps_the_need_and_leaves_it_empty_for_a_brand(monkeypatch):
 
 
 def test_brief_takes_the_models_labels_and_the_rules_fill_the_rest(monkeypatch):
-    monkeypatch.setattr(brief.aisa, "chat",
-                        lambda model, system, user, max_tokens=1500: '[{"i": 0, "kind": "brand", "why": "a launch", "use": "new"}]')
+    def chat(model, system, user, max_tokens=1500):      # answers the row it knows, whichever chunk it arrives in
+        chunk = json.loads(user)
+        return json.dumps([{"i": i, "kind": "brand", "why": "a launch", "use": "new"}
+                           for i, r in enumerate(chunk) if r["term"] == "switchy"])
+    monkeypatch.setattr(brief.aisa, "chat", chat)
     rows = [{"term": "switchy"}, {"term": "ai headshot", "format": "text"}]
     out = brief.annotate(rows, {"enabled": True, "model": "gpt-4.1-mini"})
     assert rows[0]["kind"] == "brand" and rows[0]["why"] == "a launch" and rows[0]["use"] == "new"
-    assert rows[1]["kind"] == "tool" and rows[1]["use"] == "watch"      # the rules fill what the model skipped
+    assert rows[1]["kind"] == "tool" and rows[1]["use"] == "watch"      # the rules fill what the model cannot answer
     assert out["briefed"] == 1
 
 
@@ -2956,3 +2959,36 @@ def test_a_feed_chapter_keeps_the_makers_own_sentence_under_our_reading(cfg):
                         {"usecases": {"skipped": True}, "sidelights": {"skipped": True}})
     assert "实时监控 Product Hunt 排名" in text
     assert "   → Real-time monitoring for Product Hunt rankings" in text
+
+
+def test_a_row_the_model_skipped_is_asked_again(monkeypatch):
+    """A short answer leaves the last rows of a chunk unlabelled; the report then shows English."""
+    asked = []
+
+    def chat(model, system, user, max_tokens=1500):
+        rows = json.loads(user)
+        asked.append(len(rows))
+        if len(asked) == 1:                 # first call answers only the first of two rows
+            return json.dumps([{"i": 0, "kind": "tool", "why": "第一个", "need": "one", "use": "new"}])
+        return json.dumps([{"i": i, "kind": "tool", "why": f"第二次{i}", "need": f"n{i}", "use": "new"}
+                           for i in range(len(rows))])
+    monkeypatch.setattr(brief.aisa, "chat", chat)
+    rows = [{"term": "first", "signals": [], "examples": []}, {"term": "second", "signals": [], "examples": []}]
+    out = brief.annotate(rows, {"model": "m", "enabled": True})
+    assert [r["why"] for r in rows] == ["第一个", "第二次0"] and out["briefed"] == 2
+    assert asked == [2, 1]                  # the retry asks only about the row left over
+
+
+def test_a_builder_page_that_is_a_business_is_labelled_too(monkeypatch):
+    """A Lovable page for a helicopter school never becomes a lead; its own title is English."""
+    def chat(model, system, user, max_tokens=1500):
+        chunk = json.loads(user)
+        return json.dumps([{"i": i, "kind": "brand", "why": "阿尔伯塔的直升机驾驶培训", "need": "", "use": "watch"}
+                           for i in range(len(chunk))])
+    monkeypatch.setattr(brief.aisa, "chat", chat)
+    sites = [{"host": "foothillsheli.com", "term": "foothillsheli", "title": "Helicopter Pilot Training in Alberta",
+              "description": ""},
+             {"host": "covered.com", "term": "covered", "title": "already read", "description": ""}]
+    out = brief.label_sites(sites, {"model": "m", "enabled": True}, known={"covered"})
+    assert out["labelled"] == 1
+    assert sites[0]["label"] == "阿尔伯塔的直升机驾驶培训" and "label" not in sites[1]

@@ -140,6 +140,13 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
              "brief": run(lambda: brief.annotate(_to_label(cfg, lead), cfg["brief"],
                                                  use_model="brief" not in args.skip)),
              "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))})}
+    # A builder or seller page that is a business rather than a tool never becomes a lead, so the brief
+    # never reads it: label it here, or the chapter shows its own title in whatever language it is in.
+    site_rows = [*((blocks.get("builder") or {}).get("sites") or []),
+                 *((blocks.get("seller") or {}).get("sellers") or [])]
+    run(lambda: brief.label_sites(site_rows, cfg["brief"], use_model="brief" not in args.skip,
+                                  known={r["term"] for r in lead if r.get("why")}),
+        "brief" in args.skip or not site_rows)
     # The chat calls are billed apart from the data APIs: the judge and the brief take their own tokens.
     extra["brief"]["cost_micros"] = reddit_spent + aisa.take_chat_cost()
     # What the viewers of a widely shared walkthrough ask for: the one-click tool behind a ⚡ lead.

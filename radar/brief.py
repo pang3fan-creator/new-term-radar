@@ -159,6 +159,45 @@ def blurb(r: dict) -> str:
     return ""
 
 
+def _labelled(chunk: list[dict], model: str, system: str) -> int:
+    """One call for one chunk: how many rows the model answered. Raises AisaError on a failed call."""
+    user = json.dumps([{"i": i, "term": r["term"], "appeared": list(r.get("signals") or [])[:2],
+                        "about": blurb(r), "examples": [e[:160] for e in r.get("examples", [])[:2]]}
+                       for i, r in enumerate(chunk)], ensure_ascii=False)
+    labels = parse(aisa.chat(model, system, user, max_tokens=MAX_TOKENS), len(chunk))
+    for i, label in labels.items():
+        chunk[i].update(label)
+    return len(labels)
+
+
+def label_sites(sites: list[dict], setting: dict, use_model: bool = True,
+                known: set[str] | None = None) -> dict:
+    """A line in the report's language for a page that never became a lead: sets `label` on the site.
+    The builder and seller chapters list businesses as well as tools, and a business's own title is
+    in whatever language it was written in."""
+    model = setting.get("model") or ""
+    done = set(known or ())
+    todo = [s for s in sites
+            if not s.get("label") and (s.get("term") or s.get("host") or "") not in done
+            and (s.get("title") or s.get("description"))]
+    if not use_model or not setting.get("enabled", True) or not model or not todo:
+        return {"labelled": 0, "skipped": True}
+    rows = [{"term": s.get("term") or s.get("host") or "", "signals": [], "examples": [],
+             "about": ("", s.get("description") or s.get("title") or "")} for s in todo]
+    system = SYSTEM + "\nWrite `why` and `need` in " + ("Chinese." if i18n.lang() == "zh" else "English.")
+    answered, error = 0, ""
+    for start in range(0, len(rows), CHUNK):
+        try:
+            answered += _labelled(rows[start:start + CHUNK], model, system)
+        except aisa.AisaError as exc:
+            error = str(exc)[:160]
+            break
+    for site, row in zip(todo, rows):
+        if row.get("why"):
+            site["label"] = row["why"][:120]
+    return {"labelled": answered, **({"error": error} if error else {})}
+
+
 def annotate(rows: list[dict], setting: dict, use_model: bool = True) -> dict:
     """Sets kind, why and use on each row: the model first, rules for whatever it left out.
     `use_model=False` (--skip brief) keeps the labels from the rules alone."""
@@ -169,17 +208,20 @@ def annotate(rows: list[dict], setting: dict, use_model: bool = True) -> dict:
     done, error = 0, ""
     system = SYSTEM + "\nWrite `why` and `need` in " + ("Chinese." if i18n.lang() == "zh" else "English.")
     for start in range(0, len(rows), CHUNK):
-        chunk = rows[start:start + CHUNK]
-        user = json.dumps([{"i": i, "term": r["term"], "appeared": list(r.get("signals") or [])[:2],
-                            "about": blurb(r), "examples": [e[:160] for e in r.get("examples", [])[:2]]}
-                           for i, r in enumerate(chunk)], ensure_ascii=False)
         try:
-            labels = parse(aisa.chat(model, system, user, max_tokens=MAX_TOKENS), len(chunk))
+            done += _labelled(rows[start:start + CHUNK], model, system)
         except aisa.AisaError as exc:
             error = str(exc)[:160]
             break
-        for i, label in labels.items():
-            chunk[i].update(label)
-            done += 1
+    # A short answer leaves the last rows of a chunk without a label; ask once more for just those,
+    # so a page the model skipped still reads in the report's language.
+    left = [r for r in rows if not r.get("why")]
+    for start in range(0, len(left), CHUNK):
+        if error:
+            break
+        try:
+            done += _labelled(left[start:start + CHUNK], model, system)
+        except aisa.AisaError as exc:
+            error = str(exc)[:160]
     by_rules(rows)                         # fills what the model did not answer, and keeps what it did
     return {"briefed": done, "by_rules": len(rows) - done, **({"error": error} if error else {})}

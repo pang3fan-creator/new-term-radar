@@ -143,11 +143,13 @@ def _rows(source: str, b: dict[str, dict], by_term: dict[str, dict],
     elif source == "seller":
         for s in b.get("seller", {}).get("sellers") or []:
             r = _match(s.get("term") or s["host"], labels)   # the page's own name, not a substring of its host
-            out.append((s["host"], _what(r) or _clip(_cell(s["title"]), 60), sellers.LABEL.get(s["platform"], s["platform"]), r))
+            out.append((s["host"], _what(r) or _clip(_cell(s.get("label") or s.get("title") or ""), 60),
+                        sellers.LABEL.get(s["platform"], s["platform"]), r))
     elif source == "builder":
         for s in b.get("builder", {}).get("sites") or []:
             r = _match(s.get("term") or s["host"], labels)   # ditto: *.lovable.app is not "lovable"
-            out.append((s["host"], _what(r) or _clip(_cell(s["title"]), 60), sellers.LABEL.get(s["platform"], s["platform"]), r))
+            out.append((s["host"], _what(r) or _clip(_cell(s.get("label") or s.get("title") or ""), 60),
+                        sellers.LABEL.get(s["platform"], s["platform"]), r))
     elif source in FEED_SOURCES:
         name = SOURCE_KEY[source][5:].split(":")[0]
         where = SOURCE_KEY[source][5:].partition(":")[2]
